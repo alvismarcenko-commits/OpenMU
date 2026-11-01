@@ -111,6 +111,7 @@ public static class PlayerTestHelper
                 new (Stats.CurrentMana, 0, false),
                 new (Stats.CurrentShield, 0, false),
                 new (Stats.Resets, 0, false),
+                new (Stats.GrandResets, 0, false),
                 new (Stats.PointsPerReset, 0, false),
             });
         characterClassMock.Setup(c => c.AttributeCombinations).Returns(new List<AttributeRelationship>

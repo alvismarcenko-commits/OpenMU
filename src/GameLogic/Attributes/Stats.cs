@@ -146,7 +146,13 @@ public class Stats
     /// Gets the reset quantity attribute definition.
     /// </summary>
     public static AttributeDefinition Resets { get; } = new(new Guid("89A891A7-F9F9-4AB5-AF36-12056E53A5F7"), "Resets", "Reset quantity of current character");
-
+/// <summary>
+/// Gets the grand reset quantity attribute definition.
+/// </summary>
+public static AttributeDefinition GrandResets { get; } =
+    new(new Guid("C7F3A820-4D61-4B8E-9A32-72E5C9D104BF"),
+        "Grand Resets",
+        "Grand reset quantity of current character.");
     /// <summary>
     /// Gets the registered renas / items attribute definition.
     /// </summary>

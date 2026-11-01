@@ -61,7 +61,6 @@ public class ResetCharacterAction
             await this.ShowMessageAsync(nameof(PlayerMessage.ResetNotConfigured)).ConfigureAwait(false);
             return;
         }
-
         var resetProgression = ResetProgressionCalculator.Calculate(this.GetResetCount(), (int)this._player.Attributes[Stats.PointsPerReset], configuration);
 
         if (this._player.Level < configuration.RequiredLevel)
@@ -177,7 +176,7 @@ public class ResetCharacterAction
         return requiredItems;
     }
 
-    private void UpdateStats(ResetConfiguration configuration, ResetProgression resetProgression)
+private void UpdateStats(ResetConfiguration configuration, ResetProgression resetProgression)
     {
         if (configuration.ResetStats)
         {
@@ -188,11 +187,13 @@ public class ResetCharacterAction
 
         if (configuration.ReplacePointsPerReset)
         {
-            this._player.SelectedCharacter!.LevelUpPoints = resetProgression.TotalPointsAfterReset;
+            var grandResets = (int)this._player.Attributes![Stats.GrandResets];
+            var bonus = GrandResetCalculator.CalculateBonusPoints(grandResets);
+            this._player.SelectedCharacter!.LevelUpPoints = checked(resetProgression.TotalPointsAfterReset + bonus);
         }
         else
         {
-            this._player.SelectedCharacter!.LevelUpPoints += resetProgression.PointsForReset;
+            this._player.SelectedCharacter!.LevelUpPoints = checked(this._player.SelectedCharacter.LevelUpPoints + resetProgression.PointsForReset);
         }
     }
 

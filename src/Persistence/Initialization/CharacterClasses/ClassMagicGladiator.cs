@@ -1,4 +1,4 @@
-﻿// <copyright file="ClassMagicGladiator.cs" company="MUnique">
+// <copyright file="ClassMagicGladiator.cs" company="MUnique">
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 // </copyright>
 
@@ -50,6 +50,7 @@ internal partial class CharacterClassInitialization
         result.StatAttributes.Add(this.CreateStatAttributeDefinition(Stats.IsInSafezone, 1, false));
         result.StatAttributes.Add(this.CreateStatAttributeDefinition(Stats.IsResting, 0, false));
         result.StatAttributes.Add(this.CreateStatAttributeDefinition(Stats.Resets, 0, false));
+            result.StatAttributes.Add(this.CreateStatAttributeDefinition(Stats.GrandResets, 0, false));
         result.StatAttributes.Add(this.CreateStatAttributeDefinition(Stats.NearbyPartyMemberCount, 0, false));
 
         this.AddCommonAttributeRelationships(result.AttributeCombinations);
