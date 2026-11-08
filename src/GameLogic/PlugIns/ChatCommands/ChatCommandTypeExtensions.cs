@@ -69,6 +69,8 @@ public static class ChatCommandTypeExtensions
             .Select(plugInType => (PlugInType: plugInType, Help: plugInType.GetCustomAttribute<ChatCommandHelpAttribute>()))
             .Where(command => command.Help is { })
             .Where(command => player.SelectedCharacter?.CharacterStatus >= command.Help!.MinimumCharacterStatus)
+            .Where(command => plugInManager.GetStrategy<IChatCommandPlugIn>(command.Help!.Command) is { } handler
+                && player.SelectedCharacter?.CharacterStatus >= handler.MinCharacterStatusRequirement)
             .Select(command => (command.PlugInType, Help: command.Help!));
     }
 

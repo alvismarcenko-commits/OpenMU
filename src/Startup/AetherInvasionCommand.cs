@@ -26,7 +26,8 @@ internal static class AetherInvasionCommand
         if (Environment.GetEnvironmentVariable("AETHER_LOCAL_STAGING") != "true"
             || home is null || !Path.IsPathFullyQualified(home)
             || parts is not [var operation, var requestId]
-            || operation is not ("aether-golden-invasion" or "aether-golden-stop" or "aether-treasure-start" or "aether-treasure-stop")
+            || operation is not ("aether-golden-invasion" or "aether-golden-stop" or "aether-treasure-start" or "aether-treasure-stop"
+                or "aether-boss-start" or "aether-boss-stop")
             || !Guid.TryParseExact(requestId, "N", out _))
         {
             return;
@@ -44,7 +45,7 @@ internal static class AetherInvasionCommand
             }
 
             var status = "unavailable";
-            if (File.Exists(Path.Combine(home, "STOP")) && operation is "aether-golden-invasion" or "aether-treasure-start")
+            if (File.Exists(Path.Combine(home, "STOP")) && !operation.EndsWith("-stop", StringComparison.Ordinal))
             {
                 status = "emergency_disabled";
             }
@@ -62,6 +63,11 @@ internal static class AetherInvasionCommand
                     && plugins.OfType<AetherTreasureHuntPlugIn>().SingleOrDefault() is { } treasure)
                 {
                     status = await treasure.OperateAsync(server.Context, operation == "aether-treasure-start").ConfigureAwait(false);
+                }
+                else if (operation.StartsWith("aether-boss-", StringComparison.Ordinal)
+                    && plugins.OfType<AetherBossRaidPlugIn>().SingleOrDefault() is { } boss)
+                {
+                    status = await boss.OperateAsync(server.Context, operation == "aether-boss-start").ConfigureAwait(false);
                 }
             }
 

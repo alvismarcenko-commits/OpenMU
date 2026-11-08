@@ -1126,16 +1126,46 @@ Inventory Extensions: {18}</value>
   <data name="MapIsNotActive" xml:space="preserve">
     <value>This map is not available.</value>
   </data>
-  <data name="PrestigeGrandResetCompleted" xml:space="preserve"><value>Grand Reset completed. 100 APP awarded. No additional stat points.</value></data>
+  <data name="PrestigeGrandResetCompleted" xml:space="preserve"><value>Grand Reset complete. Level 1, Reset 0. Earned 100 APP.</value></data>
   <data name="PrestigeLegacyReviewRequired" xml:space="preserve"><value>This character requires a review of legacy Grand Reset bonuses before resetting. Your progress has not changed.</value></data>
-<data name="GrandResetUnavailable" xml:space="preserve"><value>Grand Reset is disabled, the character is busy, or fewer than 100 resets are available.</value></data>
+<data name="GrandResetUnavailable" xml:space="preserve"><value>Grand Reset unavailable. Use /resetinfo to see your Realm requirement.</value></data>
 <data name="GrandResetCompleted" xml:space="preserve"><value>Grand Reset completed! Total: {0}. Permanent assignable bonus: {1} points.</value></data>
-  <data name="AetherBotHelp" xml:space="preserve"><value>AetherMU: /aether rules | /aether events | /resetinfo</value></data>
+  <data name="AetherBotHelp" xml:space="preserve"><value>AetherMU: /aether rules | /aether events | /aether hunt | /resetinfo</value></data>
   <data name="AetherBotRules" xml:space="preserve"><value>Play fairly. No cheating, account theft or harassment. Rules: aethermu.eu</value></data>
   <data name="AetherBotEvents" xml:space="preserve"><value>Next UTC: Golden Invasion {0} | Treasure Hunt {1}</value></data>
   <data name="AetherBotWelcome" xml:space="preserve"><value>Welcome to Ascension x100. Type /aether for help.</value></data>
   <data name="AetherGoldenCountdown" xml:space="preserve"><value>Golden Invasion begins in {0} min.</value></data>
   <data name="AetherTreasureStarted" xml:space="preserve"><value>Treasure Hunt: Find the Jewel of Chaos in {0}.</value></data>
   <data name="AetherTreasureEnded" xml:space="preserve"><value>Treasure Hunt has ended.</value></data>
+  <data name="PrestigeGrandResetBalance" xml:space="preserve"><value>APP balance after Grand Reset: {0}</value></data>
+  <data name="PrestigeGrandResetProgress" xml:space="preserve"><value>Grand Reset ({0}): {1}/{2} resets. Reward: 100 APP.</value></data>
+  <data name="PrestigeGrandResetDisabled" xml:space="preserve"><value>Grand Reset is disabled on this server.</value></data>
+  <data name="AetherTreasureHint" xml:space="preserve"><value>Treasure Hunt: look for the Jewel of Chaos in {0}.</value></data>
+  <data name="AetherTreasureClaimed" xml:space="preserve"><value>The treasure has already been picked up.</value></data>
+  <data name="AetherTreasureInactive" xml:space="preserve"><value>There is no active Treasure Hunt.</value></data>
+  <data name="AetherTreasureRewardSaved" xml:space="preserve"><value>Treasure Hunt: your Jewel of Chaos was saved.</value></data>
+  <data name="PrestigeCharacterBalance" xml:space="preserve"><value>Prestige ({0}): {1} Grand Resets, {2} APP.</value></data>
+  <data name="PrestigeBalanceUnavailable" xml:space="preserve"><value>Prestige balance is unavailable for this character.</value></data>
+  <data name="BuildPresetHelp" xml:space="preserve"><value>Build slots: /build save 1 or /build apply 1 (slots 1-3).</value></data>
+  <data name="BuildPresetUnavailable" xml:space="preserve"><value>Build presets are unavailable here. Use a safe zone outside combat or trade.</value></data>
+  <data name="BuildPresetSaved" xml:space="preserve"><value>Build saved in slot {0}.</value></data>
+  <data name="BuildPresetDoesNotFit" xml:space="preserve"><value>This build requires matching class, stats and enough free points.</value></data>
+  <data name="BuildPresetApplied" xml:space="preserve"><value>Build applied from slot {0}.</value></data>
+  <data name="AetherBossStarted" xml:space="preserve"><value>Boss hunt: {0} appeared in {1} ({2}, {3}).</value></data>
+  <data name="AetherBossDefeated" xml:space="preserve"><value>{1} defeated {0}. The winner has two minutes to collect the reward.</value></data>
+  <data name="AetherBossEnded" xml:space="preserve"><value>The boss hunt has ended.</value></data>
+  <data name="AetherBossRewardSaved" xml:space="preserve"><value>Boss hunt: {0} was saved in your inventory.</value></data>
+  <data name="AetherUiPrestige" xml:space="preserve"><value>Aether Prestige</value></data>
+  <data name="AetherUiPrestigeSnapshot" xml:space="preserve"><value>{0} | Level {1}&#10;Reset {2}/{3} | GR {4}&#10;APP {5}&#10;Select refresh for current data.</value></data>
+  <data name="AetherUiPrestigeUnavailable" xml:space="preserve"><value>Prestige is unavailable for this character.</value></data>
+  <data name="AetherUiAction" xml:space="preserve"><value>Action</value></data>
+  <data name="AetherUiGrandReset" xml:space="preserve"><value>Grand Reset</value></data>
+  <data name="AetherUiGrandResetDetails" xml:space="preserve"><value>100 APP. Level 1, Reset 0. Keeps your items. Select confirm to continue.</value></data>
+  <data name="AetherUiBuildSave" xml:space="preserve"><value>Build: save</value></data>
+  <data name="AetherUiBuildApply" xml:space="preserve"><value>Build: apply</value></data>
+  <data name="AetherUiBuildDetails" xml:space="preserve"><value>Use a slot from 1 to 3 in a safe zone. Applying uses ordinary stat points.</value></data>
+  <data name="AetherUiSlot" xml:space="preserve"><value>Slot</value></data>
+  <data name="AetherUiHunt" xml:space="preserve"><value>Treasure Hunt</value></data>
+  <data name="AetherUiEvents" xml:space="preserve"><value>Event schedule</value></data>
 </root>
 

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+  <data name="AetherUiPrestige" xml:space="preserve"><value>Aether Prestige</value></data>
+  <data name="AetherUiPrestigeSnapshot" xml:space="preserve"><value>{0} | Livello {1}&#10;Reset {2}/{3} | GR {4}&#10;APP {5}&#10;Scegli refresh per aggiornare.</value></data>
+  <data name="AetherUiPrestigeUnavailable" xml:space="preserve"><value>Prestige non disponibile per questo personaggio.</value></data>
+  <data name="AetherUiAction" xml:space="preserve"><value>Azione</value></data>
+  <data name="AetherUiGrandReset" xml:space="preserve"><value>Grand Reset</value></data>
+  <data name="AetherUiGrandResetDetails" xml:space="preserve"><value>100 APP. Livello 1, Reset 0. Conservi gli oggetti. Scegli confirm.</value></data>
+  <data name="AetherUiBuildSave" xml:space="preserve"><value>Build: salva</value></data>
+  <data name="AetherUiBuildApply" xml:space="preserve"><value>Build: applica</value></data>
+  <data name="AetherUiBuildDetails" xml:space="preserve"><value>Scegli uno slot 1–3 in zona sicura. Usa punti statistica normali.</value></data>
+  <data name="AetherUiSlot" xml:space="preserve"><value>Slot</value></data>
+  <data name="AetherUiHunt" xml:space="preserve"><value>Caccia al tesoro</value></data>
+  <data name="AetherUiEvents" xml:space="preserve"><value>Calendario eventi</value></data>
+</root>

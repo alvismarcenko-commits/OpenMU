@@ -60,6 +60,10 @@ public partial class GrandResetPostgreSqlTest
             var receipt = await ((IPrestigeCharacterContext)persistence).ExecutePrestigeExchangeAsync(character, realm, Guid.NewGuid().ToString(), threshold).ConfigureAwait(false);
             using var data = JsonDocument.Parse(receipt);
             Assert.That(data.RootElement.GetProperty("app_granted").GetString(), Is.EqualTo(award));
+            var profile = await ((IPrestigeCharacterContext)persistence).ReadPrestigeAsync(character, realm).ConfigureAwait(false);
+            Assert.That(profile, Is.EqualTo(("1", award)));
+            var otherRealm = realm == "origin" ? "ascension" : "origin";
+            Assert.That(await ((IPrestigeCharacterContext)persistence).ReadPrestigeAsync(character, otherRealm).ConfigureAwait(false), Is.Null);
         }
         await using var verify = this.CreateContext();
         var stored = await LoadAsync(verify, id).ConfigureAwait(false);

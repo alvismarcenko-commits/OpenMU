@@ -1410,6 +1410,11 @@ public class Player : AsyncDisposable, IBucketMapObserver, IAttackable, IAttacke
     public ValueTask RunPersistenceExclusiveAsync(Func<ValueTask> operation, CancellationToken cancellationToken = default)
         => this._persistence.RunExclusiveAsync(operation, cancellationToken);
 
+    /// <summary>Discards the selected character's in-progress skill combo.</summary>
+    /// <returns>The reset task.</returns>
+    internal ValueTask ResetComboProgressAsync()
+        => this._comboStateLazy is { IsValueCreated: true } combo ? combo.Value.ResetAsync() : ValueTask.CompletedTask;
+
     /// <summary>
     /// Is called after the player killed a <see cref="Player"/>.
     /// Increment PK Level.

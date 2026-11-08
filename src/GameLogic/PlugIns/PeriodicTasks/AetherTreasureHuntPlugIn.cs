@@ -76,6 +76,33 @@ public sealed class AetherTreasureHuntPlugIn : PeriodicTaskBasePlugIn<PeriodicTa
         return "stopped";
     }
 
+    /// <summary>Shows the current hunt to players who missed its announcement.</summary>
+    /// <param name="player">The requesting player.</param>
+    /// <returns>The message task.</returns>
+    public async ValueTask ShowStatusAsync(Player player)
+    {
+        string? mapName = null;
+        bool claimed;
+        using (await this._gate.LockAsync().ConfigureAwait(false))
+        {
+            var treasure = this._treasure;
+            claimed = treasure is not null && treasure.CurrentMap.GetDrop(treasure.Id) != treasure;
+            if (treasure is not null && !claimed)
+            {
+                mapName = treasure.CurrentMap.Definition.Name.GetTranslation(player.Culture);
+            }
+        }
+
+        if (mapName is not null)
+        {
+            await player.ShowLocalizedBlueMessageAsync("AetherTreasureHint", mapName).ConfigureAwait(false);
+        }
+        else
+        {
+            await player.ShowLocalizedBlueMessageAsync(claimed ? "AetherTreasureClaimed" : "AetherTreasureInactive").ConfigureAwait(false);
+        }
+    }
+
     /// <inheritdoc />
     public override async ValueTask ExecuteTaskAsync(GameContext gameContext)
     {

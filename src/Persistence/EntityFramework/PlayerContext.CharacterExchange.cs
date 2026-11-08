@@ -18,6 +18,34 @@ internal partial class PlayerContext : IPrestigeCharacterContext
     private bool _exchangeContextInvalid;
 
     /// <inheritdoc />
+    public async ValueTask<(string GrandResets, string Balance)?> ReadPrestigeAsync(DataModel.Entities.Character character, string realm, CancellationToken cancellationToken = default)
+    {
+        this.EnsurePrestigeStagingDatabase();
+        using var contextLock = await this.LockAsync(cancellationToken).ConfigureAwait(false);
+        this.EnsureExchangeContextValid();
+        await this.Context.Database.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await using var command = this.Context.Database.GetDbConnection().CreateCommand();
+            command.CommandText = """
+                SELECT gr_count::text, balance::text
+                FROM aether_prestige.characters
+                WHERE realm=@realm AND character_id=@character AND migration_state='approved'
+                """;
+            Add(command, "realm", realm);
+            Add(command, "character", ((Character)character).Id);
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            return await reader.ReadAsync(cancellationToken).ConfigureAwait(false)
+                ? (reader.GetString(0), reader.GetString(1))
+                : null;
+        }
+        finally
+        {
+            await this.Context.Database.CloseConnectionAsync().ConfigureAwait(false);
+        }
+    }
+
+    /// <inheritdoc />
     public async ValueTask<string> ExecutePrestigeExchangeAsync(DataModel.Entities.Character character, string realm, string operationId, int resetsBefore, CancellationToken cancellationToken = default)
     {
         this.EnsurePrestigeStagingDatabase();

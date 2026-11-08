@@ -52,12 +52,29 @@ public sealed class AetherHelpChatCommandPlugIn : IChatCommandPlugIn, IPlayerSta
             Command or Command + " help" => "help",
             Command + " rules" => "rules",
             Command + " events" => "events",
+            Command + " hunt" => "hunt",
             _ => "invalid",
         };
         if (player.GameContext is IGameServerContext server)
         {
             await server.EventPublisher.GameEventAsync(new AetherObservationEvent(server.Id, DateTime.UtcNow,
                 "gm_bot", action)).ConfigureAwait(false);
+        }
+
+        var plugins = player.GameContext.PlugInManager.GetActivePlugInsOf<IPeriodicTaskPlugIn>();
+        if (action == "hunt")
+        {
+            var hunt = plugins.OfType<AetherTreasureHuntPlugIn>().FirstOrDefault();
+            if (hunt is not null)
+            {
+                await hunt.ShowStatusAsync(player).ConfigureAwait(false);
+            }
+            else
+            {
+                await player.ShowLocalizedBlueMessageAsync("AetherTreasureInactive").ConfigureAwait(false);
+            }
+
+            return;
         }
 
         if (action != "events")
@@ -68,7 +85,6 @@ public sealed class AetherHelpChatCommandPlugIn : IChatCommandPlugIn, IPlayerSta
         }
 
         var nowUtc = DateTime.UtcNow;
-        var plugins = player.GameContext.PlugInManager.GetActivePlugInsOf<IPeriodicTaskPlugIn>();
         var zone = player.GameContext.ServerTimeZone;
         var golden = plugins.OfType<GoldenInvasionPlugIn>().FirstOrDefault()?.GetNextStartUtc(nowUtc, zone);
         var treasure = plugins.OfType<AetherTreasureHuntPlugIn>().FirstOrDefault()?.GetNextStartUtc(nowUtc, zone);

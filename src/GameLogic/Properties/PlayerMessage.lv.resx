@@ -4,11 +4,38 @@
   <resheader name="version"><value>2.0</value></resheader>
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
-  <data name="AetherBotHelp" xml:space="preserve"><value>AetherMU: /aether rules | /aether events | /resetinfo</value></data>
+  <data name="AetherBotHelp" xml:space="preserve"><value>AetherMU: /aether rules | /aether events | /aether hunt | /resetinfo</value></data>
   <data name="AetherBotRules" xml:space="preserve"><value>Spēlē godīgi. Krāpšana, kontu zādzības un aizskaršana ir aizliegta.</value></data>
   <data name="AetherBotEvents" xml:space="preserve"><value>Nākamais UTC: Golden Invasion {0} | Treasure Hunt {1}</value></data>
   <data name="AetherBotWelcome" xml:space="preserve"><value>Laipni lūgts Ascension x100. Palīdzībai raksti /aether.</value></data>
   <data name="AetherGoldenCountdown" xml:space="preserve"><value>Golden Invasion sāksies pēc {0} min.</value></data>
   <data name="AetherTreasureStarted" xml:space="preserve"><value>Treasure Hunt: atrodi Jewel of Chaos kartē {0}.</value></data>
   <data name="AetherTreasureEnded" xml:space="preserve"><value>Treasure Hunt ir beidzies.</value></data>
+  <data name="AetherTreasureHint" xml:space="preserve"><value>Dārgumu medības: meklē Jewel of Chaos kartē {0}.</value></data>
+  <data name="AetherTreasureClaimed" xml:space="preserve"><value>Dārgums jau ir pacelts.</value></data>
+  <data name="AetherTreasureInactive" xml:space="preserve"><value>Pašlaik dārgumu medības nenotiek.</value></data>
+  <data name="AetherTreasureRewardSaved" xml:space="preserve"><value>Dārgumu medības: tavs Jewel of Chaos ir saglabāts.</value></data>
+  <data name="PrestigeCharacterBalance" xml:space="preserve"><value>Prestige ({0}): {1} Grand Reset, {2} APP.</value></data>
+  <data name="PrestigeBalanceUnavailable" xml:space="preserve"><value>Šim tēlam Prestige bilance pašlaik nav pieejama.</value></data>
+  <data name="BuildPresetHelp" xml:space="preserve"><value>Komplekti: /build save 1 vai /build apply 1 (vietas 1–3).</value></data>
+  <data name="BuildPresetUnavailable" xml:space="preserve"><value>Komplekti šeit nav pieejami. Izmanto drošo zonu ārpus kaujas vai maiņas.</value></data>
+  <data name="BuildPresetSaved" xml:space="preserve"><value>Komplekts saglabāts vietā {0}.</value></data>
+  <data name="BuildPresetDoesNotFit" xml:space="preserve"><value>Komplektam vajag atbilstošu klasi, status un pietiekami brīvu punktu.</value></data>
+  <data name="BuildPresetApplied" xml:space="preserve"><value>Pielietots komplekts no vietas {0}.</value></data>
+  <data name="AetherBossStarted" xml:space="preserve"><value>Bosa medības: {0} parādījās kartē {1} ({2}, {3}).</value></data>
+  <data name="AetherBossDefeated" xml:space="preserve"><value>{1} pieveica {0}. Uzvarētājam ir divas minūtes balvas pacelšanai.</value></data>
+  <data name="AetherBossEnded" xml:space="preserve"><value>Bosa medības beigušās.</value></data>
+  <data name="AetherBossRewardSaved" xml:space="preserve"><value>Bosa medības: {0} saglabāts inventārā.</value></data>
+  <data name="AetherUiPrestige" xml:space="preserve"><value>Aether Prestige</value></data>
+  <data name="AetherUiPrestigeSnapshot" xml:space="preserve"><value>{0} | Līmenis {1}&#10;Reset {2}/{3} | GR {4}&#10;APP {5}&#10;Izvēlies refresh, lai atjaunotu.</value></data>
+  <data name="AetherUiPrestigeUnavailable" xml:space="preserve"><value>Šim tēlam Prestige nav pieejams.</value></data>
+  <data name="AetherUiAction" xml:space="preserve"><value>Darbība</value></data>
+  <data name="AetherUiGrandReset" xml:space="preserve"><value>Grand Reset</value></data>
+  <data name="AetherUiGrandResetDetails" xml:space="preserve"><value>100 APP. 1. līmenis, 0 Reset. Mantas saglabājas. Izvēlies confirm, lai turpinātu.</value></data>
+  <data name="AetherUiBuildSave" xml:space="preserve"><value>Build: saglabāt</value></data>
+  <data name="AetherUiBuildApply" xml:space="preserve"><value>Build: lietot</value></data>
+  <data name="AetherUiBuildDetails" xml:space="preserve"><value>Izvēlies vietu 1–3 drošā zonā. Lietošana tērē parastos stat punktus.</value></data>
+  <data name="AetherUiSlot" xml:space="preserve"><value>Vieta</value></data>
+  <data name="AetherUiHunt" xml:space="preserve"><value>Dārgumu medības</value></data>
+  <data name="AetherUiEvents" xml:space="preserve"><value>Pasākumu grafiks</value></data>
 </root>
