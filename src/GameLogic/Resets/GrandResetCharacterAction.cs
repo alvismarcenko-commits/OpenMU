@@ -4,6 +4,7 @@
 
 namespace MUnique.OpenMU.GameLogic.Resets;
 
+using System.Text.Json;
 using MUnique.OpenMU.GameLogic.Attributes;
 using MUnique.OpenMU.GameLogic.Views.Character;
 using MUnique.OpenMU.Persistence;
@@ -73,6 +74,7 @@ public class GrandResetCharacterAction
         var oldExperience = character.Experience;
         var oldPoints = character.LevelUpPoints;
         var resetsBefore = checked((int)attributes[Stats.Resets]);
+        string receipt;
         try
         {
             foreach (var stat in character.CharacterClass.StatAttributes.Where(s => s.IncreasableByPlayer && s.Attribute is not null))
@@ -85,7 +87,7 @@ public class GrandResetCharacterAction
             // Prestige counters live in NUMERIC, never in the legacy float attribute.
             character.Experience = 0;
             character.LevelUpPoints = 0;
-            await ((IPrestigeCharacterContext)this._player.PersistenceContext).ExecutePrestigeExchangeAsync(
+            receipt = await ((IPrestigeCharacterContext)this._player.PersistenceContext).ExecutePrestigeExchangeAsync(
                 character, configuration.PrestigeRealm, Guid.NewGuid().ToString(), resetsBefore).ConfigureAwait(false);
         }
         catch
@@ -100,7 +102,11 @@ public class GrandResetCharacterAction
 
         await this._player.InvokeViewPlugInAsync<IUpdateCharacterBaseStatsPlugIn>(p => p.UpdateCharacterBaseStatsAsync()).ConfigureAwait(false);
         await this._player.InvokeViewPlugInAsync<IUpdateLevelPlugIn>(p => p.UpdateLevelAsync()).ConfigureAwait(false);
+        // Read only after commit, outside the rollback path. Keep numeric counters as strings.
+        using var result = JsonDocument.Parse(receipt);
+        var balance = result.RootElement.GetProperty("balance_app").GetString();
         await this._player.ShowLocalizedBlueMessageAsync("PrestigeGrandResetCompleted").ConfigureAwait(false);
+        await this._player.ShowLocalizedBlueMessageAsync("PrestigeGrandResetBalance", balance).ConfigureAwait(false);
     }
 }
 

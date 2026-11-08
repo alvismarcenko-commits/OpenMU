@@ -1126,9 +1126,9 @@ Inventory Extensions: {18}</value>
   <data name="MapIsNotActive" xml:space="preserve">
     <value>This map is not available.</value>
   </data>
-  <data name="PrestigeGrandResetCompleted" xml:space="preserve"><value>Grand Reset completed. 100 APP awarded. No additional stat points.</value></data>
+  <data name="PrestigeGrandResetCompleted" xml:space="preserve"><value>Grand Reset complete. Level 1, Reset 0. Earned 100 APP.</value></data>
   <data name="PrestigeLegacyReviewRequired" xml:space="preserve"><value>This character requires a review of legacy Grand Reset bonuses before resetting. Your progress has not changed.</value></data>
-<data name="GrandResetUnavailable" xml:space="preserve"><value>Grand Reset is disabled, the character is busy, or fewer than 100 resets are available.</value></data>
+<data name="GrandResetUnavailable" xml:space="preserve"><value>Grand Reset unavailable. Use /resetinfo to see your Realm requirement.</value></data>
 <data name="GrandResetCompleted" xml:space="preserve"><value>Grand Reset completed! Total: {0}. Permanent assignable bonus: {1} points.</value></data>
   <data name="AetherBotHelp" xml:space="preserve"><value>AetherMU: /aether rules | /aether events | /resetinfo</value></data>
   <data name="AetherBotRules" xml:space="preserve"><value>Play fairly. No cheating, account theft or harassment. Rules: aethermu.eu</value></data>
@@ -1137,5 +1137,8 @@ Inventory Extensions: {18}</value>
   <data name="AetherGoldenCountdown" xml:space="preserve"><value>Golden Invasion begins in {0} min.</value></data>
   <data name="AetherTreasureStarted" xml:space="preserve"><value>Treasure Hunt: Find the Jewel of Chaos in {0}.</value></data>
   <data name="AetherTreasureEnded" xml:space="preserve"><value>Treasure Hunt has ended.</value></data>
+  <data name="PrestigeGrandResetBalance" xml:space="preserve"><value>APP balance after Grand Reset: {0}</value></data>
+  <data name="PrestigeGrandResetProgress" xml:space="preserve"><value>Grand Reset ({0}): {1}/{2} resets. Reward: 100 APP.</value></data>
+  <data name="PrestigeGrandResetDisabled" xml:space="preserve"><value>Grand Reset is disabled on this server.</value></data>
 </root>
 

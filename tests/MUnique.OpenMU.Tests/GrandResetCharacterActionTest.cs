@@ -4,11 +4,14 @@
 
 namespace MUnique.OpenMU.Tests;
 
+using Moq;
 using MUnique.OpenMU.DataModel.Configuration.Items;
 using MUnique.OpenMU.DataModel.Entities;
 using MUnique.OpenMU.GameLogic;
 using MUnique.OpenMU.GameLogic.Attributes;
 using MUnique.OpenMU.GameLogic.Resets;
+using MUnique.OpenMU.GameLogic.Views;
+using MUnique.OpenMU.Interfaces;
 
 /// <summary>
 /// Regression tests for the GR action and the atomic APP boundary; persistence here is a test double.
@@ -309,11 +312,16 @@ public class GrandResetCharacterActionTest
         config.PrestigeResetsRequired = threshold;
         var action = new GrandResetCharacterAction(player);
         var context = (AtomicTestContext)player.PersistenceContext;
+        var messages = Mock.Get(player.ViewPlugIns.GetPlugIn<IShowMessagePlugIn>()!);
         player.Attributes![Stats.Resets] = threshold - 1;
+        await new ResetInfoChatCommandPlugIn().HandleCommandAsync(player, "/resetinfo").ConfigureAwait(false);
+        messages.Verify(view => view.ShowMessageAsync($"Grand Reset ({realm}): {threshold - 1}/{threshold} resets. Reward: 100 APP.", MessageType.BlueNormal), Times.Once);
         await action.GrandResetCharacterAsync().ConfigureAwait(false);
         Assert.That(context.Exchanges, Is.Zero);
+        messages.Verify(view => view.ShowMessageAsync(It.Is<string>(message => message.StartsWith("APP balance", StringComparison.Ordinal)), MessageType.BlueNormal), Times.Never);
         player.Attributes[Stats.Resets] = threshold;
         await action.GrandResetCharacterAsync().ConfigureAwait(false);
+        messages.Verify(view => view.ShowMessageAsync("APP balance after Grand Reset: 100", MessageType.BlueNormal), Times.Once);
         Assert.Multiple(() =>
         {
             Assert.That(context.Exchanges, Is.EqualTo(1));
@@ -382,7 +390,7 @@ public class GrandResetCharacterActionTest
             await this.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             this.GrandResets++;
             this.App += 100;
-            return "{}";
+            return System.Text.Json.JsonSerializer.Serialize(new { balance_app = this.App.ToString(System.Globalization.CultureInfo.InvariantCulture) });
         }
 
         public ValueTask<string> DeliverPrestigeRewardAsync(Character character, string realm, Guid purchaseId, Func<int, int, System.Threading.CancellationToken, ValueTask<Item>> createItem, System.Threading.CancellationToken cancellationToken = default)

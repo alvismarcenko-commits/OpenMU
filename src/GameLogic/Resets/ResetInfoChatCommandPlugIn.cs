@@ -42,6 +42,16 @@ public class ResetInfoChatCommandPlugIn : IChatCommandPlugIn
             return;
         }
 
+        if (configuration is { PrestigeEnabled: true, GrandResetEnabled: true })
+        {
+            await player.ShowLocalizedBlueMessageAsync("PrestigeGrandResetProgress", configuration.PrestigeRealm,
+                player.Attributes[Stats.Resets], configuration.PrestigeResetsRequired).ConfigureAwait(false);
+        }
+        else
+        {
+            await player.ShowLocalizedBlueMessageAsync("PrestigeGrandResetDisabled").ConfigureAwait(false);
+        }
+
         var progression = ResetProgressionCalculator.Calculate(
             (int)player.Attributes[Stats.Resets],
             (int)player.Attributes[Stats.PointsPerReset],
