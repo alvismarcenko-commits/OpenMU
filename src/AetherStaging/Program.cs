@@ -155,9 +155,15 @@ if (auditToken is { Length: 64 } && auditToken.All(char.IsAsciiHexDigit))
 {
     await using var auditConnection = new NpgsqlConnection(dsn);
     await auditConnection.OpenAsync().ConfigureAwait(false);
-    var migrationPath = Path.Combine(AppContext.BaseDirectory, "prestige", "004-live-audit.sql");
-    await using var auditMigration = new NpgsqlCommand(await File.ReadAllTextAsync(migrationPath).ConfigureAwait(false), auditConnection);
-    await auditMigration.ExecuteNonQueryAsync().ConfigureAwait(false);
+    var auditMigrations = AetherStagingState.IsCompletePlayable
+        ? new[] { "004-live-audit.sql", "006-live-boss-audit.sql" }
+        : new[] { "004-live-audit.sql" };
+    foreach (var file in auditMigrations)
+    {
+        var migrationPath = Path.Combine(AppContext.BaseDirectory, "prestige", file);
+        await using var auditMigration = new NpgsqlCommand(await File.ReadAllTextAsync(migrationPath).ConfigureAwait(false), auditConnection);
+        await auditMigration.ExecuteNonQueryAsync().ConfigureAwait(false);
+    }
 }
 else
 {
