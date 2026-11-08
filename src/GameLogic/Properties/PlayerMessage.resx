@@ -1130,7 +1130,7 @@ Inventory Extensions: {18}</value>
   <data name="PrestigeLegacyReviewRequired" xml:space="preserve"><value>This character requires a review of legacy Grand Reset bonuses before resetting. Your progress has not changed.</value></data>
 <data name="GrandResetUnavailable" xml:space="preserve"><value>Grand Reset unavailable. Use /resetinfo to see your Realm requirement.</value></data>
 <data name="GrandResetCompleted" xml:space="preserve"><value>Grand Reset completed! Total: {0}. Permanent assignable bonus: {1} points.</value></data>
-  <data name="AetherBotHelp" xml:space="preserve"><value>AetherMU: /aether rules | /aether events | /resetinfo</value></data>
+  <data name="AetherBotHelp" xml:space="preserve"><value>AetherMU: /aether rules | /aether events | /aether hunt | /resetinfo</value></data>
   <data name="AetherBotRules" xml:space="preserve"><value>Play fairly. No cheating, account theft or harassment. Rules: aethermu.eu</value></data>
   <data name="AetherBotEvents" xml:space="preserve"><value>Next UTC: Golden Invasion {0} | Treasure Hunt {1}</value></data>
   <data name="AetherBotWelcome" xml:space="preserve"><value>Welcome to Ascension x100. Type /aether for help.</value></data>
@@ -1140,5 +1140,11 @@ Inventory Extensions: {18}</value>
   <data name="PrestigeGrandResetBalance" xml:space="preserve"><value>APP balance after Grand Reset: {0}</value></data>
   <data name="PrestigeGrandResetProgress" xml:space="preserve"><value>Grand Reset ({0}): {1}/{2} resets. Reward: 100 APP.</value></data>
   <data name="PrestigeGrandResetDisabled" xml:space="preserve"><value>Grand Reset is disabled on this server.</value></data>
+  <data name="AetherTreasureHint" xml:space="preserve"><value>Treasure Hunt: look for the Jewel of Chaos in {0}.</value></data>
+  <data name="AetherTreasureClaimed" xml:space="preserve"><value>The treasure has already been picked up.</value></data>
+  <data name="AetherTreasureInactive" xml:space="preserve"><value>There is no active Treasure Hunt.</value></data>
+  <data name="AetherTreasureRewardSaved" xml:space="preserve"><value>Treasure Hunt: your Jewel of Chaos was saved.</value></data>
+  <data name="PrestigeCharacterBalance" xml:space="preserve"><value>Prestige ({0}): {1} Grand Resets, {2} APP.</value></data>
+  <data name="PrestigeBalanceUnavailable" xml:space="preserve"><value>Prestige balance is unavailable for this character.</value></data>
 </root>
 

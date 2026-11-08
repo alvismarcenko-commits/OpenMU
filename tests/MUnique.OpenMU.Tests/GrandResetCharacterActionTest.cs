@@ -384,6 +384,10 @@ public class GrandResetCharacterActionTest
 
         public System.Numerics.BigInteger App { get; private set; }
 
+        public ValueTask<(string GrandResets, string Balance)?> ReadPrestigeAsync(Character character, string realm, System.Threading.CancellationToken cancellationToken = default)
+            => ValueTask.FromResult<(string, string)?>((this.GrandResets.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                this.App.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+
         public async ValueTask<string> ExecutePrestigeExchangeAsync(Character character, string realm, string operationId, int resetsBefore, System.Threading.CancellationToken cancellationToken = default)
         {
             await this.SaveCharacterExchangeAsync(character, cancellationToken).ConfigureAwait(false);

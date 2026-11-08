@@ -4,11 +4,17 @@
   <resheader name="version"><value>2.0</value></resheader>
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
-  <data name="AetherBotHelp" xml:space="preserve"><value>AetherMU: /aether rules | /aether events | /resetinfo</value></data>
+  <data name="AetherBotHelp" xml:space="preserve"><value>AetherMU: /aether rules | /aether events | /aether hunt | /resetinfo</value></data>
   <data name="AetherBotRules" xml:space="preserve"><value>Spēlē godīgi. Krāpšana, kontu zādzības un aizskaršana ir aizliegta.</value></data>
   <data name="AetherBotEvents" xml:space="preserve"><value>Nākamais UTC: Golden Invasion {0} | Treasure Hunt {1}</value></data>
   <data name="AetherBotWelcome" xml:space="preserve"><value>Laipni lūgts Ascension x100. Palīdzībai raksti /aether.</value></data>
   <data name="AetherGoldenCountdown" xml:space="preserve"><value>Golden Invasion sāksies pēc {0} min.</value></data>
   <data name="AetherTreasureStarted" xml:space="preserve"><value>Treasure Hunt: atrodi Jewel of Chaos kartē {0}.</value></data>
   <data name="AetherTreasureEnded" xml:space="preserve"><value>Treasure Hunt ir beidzies.</value></data>
+  <data name="AetherTreasureHint" xml:space="preserve"><value>Dārgumu medības: meklē Jewel of Chaos kartē {0}.</value></data>
+  <data name="AetherTreasureClaimed" xml:space="preserve"><value>Dārgums jau ir pacelts.</value></data>
+  <data name="AetherTreasureInactive" xml:space="preserve"><value>Pašlaik dārgumu medības nenotiek.</value></data>
+  <data name="AetherTreasureRewardSaved" xml:space="preserve"><value>Dārgumu medības: tavs Jewel of Chaos ir saglabāts.</value></data>
+  <data name="PrestigeCharacterBalance" xml:space="preserve"><value>Prestige ({0}): {1} Grand Reset, {2} APP.</value></data>
+  <data name="PrestigeBalanceUnavailable" xml:space="preserve"><value>Šim tēlam Prestige bilance pašlaik nav pieejama.</value></data>
 </root>

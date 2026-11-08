@@ -95,6 +95,7 @@ public class ResetCharacterAction
         this._player.Attributes[Stats.Level] = configuration.LevelAfterReset;
         this._player.SelectedCharacter.Experience = 0;
         this.UpdateStats(configuration, resetProgression);
+        await this._player.ResetComboProgressAsync().ConfigureAwait(false);
         if (configuration.MoveHome)
         {
             await this.MoveHomeAsync().ConfigureAwait(false);

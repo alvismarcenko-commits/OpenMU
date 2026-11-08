@@ -1,12 +1,14 @@
-﻿// <copyright file="ResetInfoChatCommandPlugIn.cs" company="MUnique">
+// <copyright file="ResetInfoChatCommandPlugIn.cs" company="MUnique">
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 // </copyright>
 
 namespace MUnique.OpenMU.GameLogic.Resets;
 
+using System.Data.Common;
 using System.Runtime.InteropServices;
 using MUnique.OpenMU.GameLogic.Attributes;
 using MUnique.OpenMU.GameLogic.PlugIns.ChatCommands;
+using MUnique.OpenMU.Persistence;
 using MUnique.OpenMU.PlugIns;
 
 /// <summary>
@@ -39,6 +41,12 @@ public class ResetInfoChatCommandPlugIn : IChatCommandPlugIn
         if (player.Attributes is null || player.SelectedCharacter is null)
         {
             await player.ShowLocalizedBlueMessageAsync(nameof(PlayerMessage.NotEnteredTheGame)).ConfigureAwait(false);
+            return;
+        }
+
+        if (string.Equals(command.Trim(), Command + " app", StringComparison.OrdinalIgnoreCase))
+        {
+            await ShowAppAsync(player, configuration).ConfigureAwait(false);
             return;
         }
 
@@ -79,5 +87,31 @@ public class ResetInfoChatCommandPlugIn : IChatCommandPlugIn
                 progression.PointsForReset,
                 progression.TotalPointsAfterReset)
             .ConfigureAwait(false);
+    }
+
+    private static async ValueTask ShowAppAsync(Player player, ResetConfiguration configuration)
+    {
+        if (configuration is { PrestigeEnabled: true, GrandResetEnabled: true }
+            && player.SelectedCharacter is { } character
+            && player.PersistenceContext is IPrestigeCharacterContext persistence)
+        {
+            try
+            {
+                var status = await player.RunPersistenceExclusiveAsync(
+                    () => persistence.ReadPrestigeAsync(character, configuration.PrestigeRealm)).ConfigureAwait(false);
+                if (status is { } value)
+                {
+                    await player.ShowLocalizedBlueMessageAsync("PrestigeCharacterBalance", configuration.PrestigeRealm,
+                        value.GrandResets, value.Balance).ConfigureAwait(false);
+                    return;
+                }
+            }
+            catch (Exception ex) when (ex is DbException or InvalidOperationException)
+            {
+                player.Logger.LogWarning(ex, "Unable to load the selected character's Prestige status.");
+            }
+        }
+
+        await player.ShowLocalizedBlueMessageAsync("PrestigeBalanceUnavailable").ConfigureAwait(false);
     }
 }

@@ -100,6 +100,7 @@ public class GrandResetCharacterAction
             throw;
         }
 
+        await this._player.ResetComboProgressAsync().ConfigureAwait(false);
         await this._player.InvokeViewPlugInAsync<IUpdateCharacterBaseStatsPlugIn>(p => p.UpdateCharacterBaseStatsAsync()).ConfigureAwait(false);
         await this._player.InvokeViewPlugInAsync<IUpdateLevelPlugIn>(p => p.UpdateLevelAsync()).ConfigureAwait(false);
         // Read only after commit, outside the rollback path. Keep numeric counters as strings.
