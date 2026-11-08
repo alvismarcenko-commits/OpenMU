@@ -86,7 +86,7 @@ if (args.SequenceEqual(new[] { "initialize-empty" }))
     if (!await context.SaveChangesAsync()) { throw new InvalidOperationException("Staging configuration save failed."); }
     await using (var transaction = await connection.BeginTransactionAsync())
     {
-        foreach (var file in new[] { "001-prestige.sql", "002-delivery.sql", "003-gr-app-100.sql" })
+        foreach (var file in new[] { "001-prestige.sql", "002-delivery.sql", "003-gr-app-100.sql", "005-build-presets.sql" })
         {
             await using var migration = new NpgsqlCommand(await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "prestige", file)), connection, transaction);
             await migration.ExecuteNonQueryAsync();

@@ -1146,5 +1146,10 @@ Inventory Extensions: {18}</value>
   <data name="AetherTreasureRewardSaved" xml:space="preserve"><value>Treasure Hunt: your Jewel of Chaos was saved.</value></data>
   <data name="PrestigeCharacterBalance" xml:space="preserve"><value>Prestige ({0}): {1} Grand Resets, {2} APP.</value></data>
   <data name="PrestigeBalanceUnavailable" xml:space="preserve"><value>Prestige balance is unavailable for this character.</value></data>
+  <data name="BuildPresetHelp" xml:space="preserve"><value>Build slots: /build save 1 or /build apply 1 (slots 1-3).</value></data>
+  <data name="BuildPresetUnavailable" xml:space="preserve"><value>Build presets are unavailable here. Use a safe zone outside combat or trade.</value></data>
+  <data name="BuildPresetSaved" xml:space="preserve"><value>Build saved in slot {0}.</value></data>
+  <data name="BuildPresetDoesNotFit" xml:space="preserve"><value>This build requires matching class, stats and enough free points.</value></data>
+  <data name="BuildPresetApplied" xml:space="preserve"><value>Build applied from slot {0}.</value></data>
 </root>
 
