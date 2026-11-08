@@ -34,7 +34,10 @@ public class ResetCharacterAction
     /// <summary>
     /// Reset specific character.
     /// </summary>
-    public async ValueTask ResetCharacterAsync()
+    public ValueTask ResetCharacterAsync()
+        => this._player.RunPersistenceExclusiveAsync(this.ResetExclusiveAsync);
+
+    private async ValueTask ResetExclusiveAsync()
     {
         var resetFeature = this._player.GameContext.FeaturePlugIns.GetPlugIn<ResetFeaturePlugIn>();
         if (resetFeature is null)
@@ -59,6 +62,13 @@ public class ResetCharacterAction
         if (configuration is null)
         {
             await this.ShowMessageAsync(nameof(PlayerMessage.ResetNotConfigured)).ConfigureAwait(false);
+            return;
+        }
+
+        if (this._player.Attributes[Stats.GrandResets] != 0)
+        {
+            // Do not remove or recreate historical stat bonuses as a side effect of a normal reset.
+            await this.ShowMessageAsync("PrestigeLegacyReviewRequired").ConfigureAwait(false);
             return;
         }
 
@@ -192,7 +202,7 @@ public class ResetCharacterAction
         }
         else
         {
-            this._player.SelectedCharacter!.LevelUpPoints += resetProgression.PointsForReset;
+            this._player.SelectedCharacter!.LevelUpPoints = checked(this._player.SelectedCharacter.LevelUpPoints + resetProgression.PointsForReset);
         }
     }
 
@@ -219,3 +229,4 @@ public class ResetCharacterAction
         await this._player.InvokeViewPlugInAsync<IUpdateLevelPlugIn>(p => p.UpdateLevelAsync()).ConfigureAwait(false);
     }
 }
+

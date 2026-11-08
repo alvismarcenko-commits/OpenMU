@@ -1,4 +1,4 @@
-﻿// <copyright file="EntityFrameworkContextBase.cs" company="MUnique">
+// <copyright file="EntityFrameworkContextBase.cs" company="MUnique">
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 // </copyright>
 
@@ -354,6 +354,13 @@ internal class EntityFrameworkContextBase : IContext, IConfigurationEditContext
         return this._lock.LockAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Validates whether this context may save. Called under the context lock before writing.
+    /// </summary>
+    protected virtual void ValidateSave()
+    {
+    }
+
     private static bool IsRejectedSave(Exception exception)
     {
         // Npgsql may wrap server rejections in both an execution-strategy exception and a DbUpdateException.
@@ -377,6 +384,7 @@ internal class EntityFrameworkContextBase : IContext, IConfigurationEditContext
     private async ValueTask<bool> SaveChangesCoreAsync(CancellationToken cancellationToken)
     {
         using var l = await this._lock.LockAsync(cancellationToken).ConfigureAwait(false);
+        this.ValidateSave();
 
         // when we have a change publisher attached, we want to get the changed entries before accepting them.
         // Otherwise, we can accept them.
@@ -614,3 +622,4 @@ internal class EntityFrameworkContextBase : IContext, IConfigurationEditContext
         return result;
     }
 }
+

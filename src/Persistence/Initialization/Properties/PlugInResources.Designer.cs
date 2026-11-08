@@ -977,5 +977,22 @@ namespace MUnique.OpenMU.Persistence.Initialization.Properties {
         /// <summary>Gets the localized AddItemPriceDefinitionsPlugIn_Description text.</summary>
         public static string AddItemPriceDefinitionsPlugIn_Description => ResourceManager.GetString("AddItemPriceDefinitionsPlugIn_Description", resourceCulture)!;
 
+        /// <summary>
+        ///   Grand Reset persistence
+        /// </summary>
+        public static string GrandResetAttributesPlugIn_Name {
+            get {
+                return ResourceManager.GetString("GrandResetAttributesPlugIn_Name", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Adds the persistent Grand Reset counter without enabling the feature.
+        /// </summary>
+        public static string GrandResetAttributesPlugIn_Description {
+            get {
+                return ResourceManager.GetString("GrandResetAttributesPlugIn_Description", resourceCulture);
+            }
+        }
     }
 }
+

@@ -1,4 +1,4 @@
-﻿// <copyright file="ResetConfiguration.cs" company="MUnique">
+// <copyright file="ResetConfiguration.cs" company="MUnique">
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 // </copyright>
 
@@ -12,6 +12,31 @@ using MUnique.OpenMU.DataModel.Configuration.Items;
 /// </summary>
 public class ResetConfiguration
 {
+    /// <summary>Explicit native staging opt-in. Defaults off; rates require separate approval.</summary>
+    public bool PrestigeEnabled { get; set; }
+
+    /// <summary>Separate, default-off staging item delivery gate.</summary>
+    public bool PrestigeDeliveryEnabled { get; set; }
+
+    /// <summary>Stable realm identifier. Not derived from a browser.</summary>
+    public string PrestigeRealm { get; set; } = string.Empty;
+
+    /// <summary>Candidate GR threshold, checked again by authoritative PostgreSQL rules.</summary>
+    public int PrestigeResetsRequired { get; set; } = 100;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether Grand Reset is enabled. Existing servers remain opted out.
+    /// </summary>
+    [Display(Name = nameof(PlugInResources.ResetConfiguration_GrandResetEnabled_Name), ResourceType = typeof(PlugInResources))]
+    public bool GrandResetEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets the level after Grand Reset, independently of the normal reset level.
+    /// The default also applies when an existing plugin configuration omits this setting.
+    /// </summary>
+    [Display(ResourceType = typeof(PlugInResources), Name = nameof(PlugInResources.ResetConfiguration_LevelAfterReset_Name))]
+    public int LevelAfterGrandReset { get; set; } = 1;
+
     /// <summary>
     /// Gets or sets the reset limit, which is the maximum amount of possible resets.
     /// </summary>
@@ -141,3 +166,4 @@ public class ResetConfiguration
         public int RequiredItemAmount { get; set; }
     }
 }
+

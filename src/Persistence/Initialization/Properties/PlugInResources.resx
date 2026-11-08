@@ -408,4 +408,7 @@
   <data name="AddItemPriceDefinitionsPlugIn_Description" xml:space="preserve"><value>This update adds the price definitions of special items like jewels, potions and event tickets, which were hard-coded before. Without it, these items are priced like usual equipment.</value></data>
   <data name="AddCrystalSwordIceChanceUpdatePlugIn_Name" xml:space="preserve"><value>Add Crystal Sword Ice Chance</value></data>
   <data name="AddCrystalSwordIceChanceUpdatePlugIn_Description" xml:space="preserve"><value>Adds the Crystal Sword ice chance, which turns an attack into an ice skill instead.</value></data>
+  <data name="GrandResetAttributesPlugIn_Name" xml:space="preserve"><value>Grand Reset persistence</value></data>
+  <data name="GrandResetAttributesPlugIn_Description" xml:space="preserve"><value>Adds the persistent Grand Reset counter without enabling the feature.</value></data>
 </root>
+

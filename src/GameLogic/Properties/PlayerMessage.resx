@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -1126,4 +1126,9 @@ Inventory Extensions: {18}</value>
   <data name="MapIsNotActive" xml:space="preserve">
     <value>This map is not available.</value>
   </data>
+  <data name="PrestigeGrandResetCompleted" xml:space="preserve"><value>Grand Reset completed. 100 APP awarded. No additional stat points.</value></data>
+  <data name="PrestigeLegacyReviewRequired" xml:space="preserve"><value>This character requires a review of legacy Grand Reset bonuses before resetting. Your progress has not changed.</value></data>
+<data name="GrandResetUnavailable" xml:space="preserve"><value>Grand Reset is disabled, the character is busy, or fewer than 100 resets are available.</value></data>
+<data name="GrandResetCompleted" xml:space="preserve"><value>Grand Reset completed! Total: {0}. Permanent assignable bonus: {1} points.</value></data>
 </root>
+

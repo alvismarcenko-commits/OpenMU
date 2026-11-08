@@ -61,7 +61,7 @@ public class Listener
     /// <param name="backlog">The maximum length of the pending connections queue.</param>
     public void Start(int backlog = (int)SocketOptionName.MaxConnections)
     {
-        this._clientListener = new TcpListener(IPAddress.Any, this._port);
+        this._clientListener = new TcpListener(Environment.GetEnvironmentVariable("AETHER_LOCAL_STAGING") == "true" ? IPAddress.Loopback : IPAddress.Any, this._port);
         this._clientListener.Start(backlog);
         this._clientListener.BeginAcceptSocket(this.OnAccept, null);
     }

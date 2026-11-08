@@ -25,12 +25,13 @@ public static class PlayerTestHelper
     /// <summary>
     /// Gets a test player with a new in-memory game context.
     /// </summary>
+    /// <param name="persistenceProvider">Optional isolated persistence provider.</param>
     /// <returns>The test player.</returns>
-    public static async ValueTask<Player> CreatePlayerAsync()
+    public static async ValueTask<Player> CreatePlayerAsync(MUnique.OpenMU.Persistence.IPersistenceContextProvider? persistenceProvider = null)
     {
         var gameConfiguration = CreateGameConfiguration();
         var mapInitializer = new MapInitializer(gameConfiguration, new NullLogger<MapInitializer>(), NullDropGenerator.Instance, null);
-        var gameContext = new GameContext(gameConfiguration, new InMemoryPersistenceContextProvider(), mapInitializer, new NullLoggerFactory(), new PlugInManager(null, new NullLoggerFactory(), null, null), NullDropGenerator.Instance, new ConfigurationChangeMediator());
+        var gameContext = new GameContext(gameConfiguration, persistenceProvider ?? new InMemoryPersistenceContextProvider(), mapInitializer, new NullLoggerFactory(), new PlugInManager(null, new NullLoggerFactory(), null, null), NullDropGenerator.Instance, new ConfigurationChangeMediator());
         mapInitializer.PlugInManager = gameContext.PlugInManager;
         mapInitializer.PathFinderPool = gameContext.PathFinderPool;
         return await CreatePlayerAsync(gameContext).ConfigureAwait(false);
@@ -111,6 +112,7 @@ public static class PlayerTestHelper
                 new (Stats.CurrentMana, 0, false),
                 new (Stats.CurrentShield, 0, false),
                 new (Stats.Resets, 0, false),
+                new (Stats.GrandResets, 0, false),
                 new (Stats.PointsPerReset, 0, false),
             });
         characterClassMock.Setup(c => c.AttributeCombinations).Returns(new List<AttributeRelationship>
@@ -201,3 +203,4 @@ public static class PlayerTestHelper
         }
     }
 }
+
