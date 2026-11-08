@@ -33,4 +33,5 @@ using System.Text.Json.Serialization;
 [JsonDerivedType(typeof(AccountLoginBlockedEvent), nameof(AccountLoginBlockedEvent))]
 [JsonDerivedType(typeof(LetterReceivedEvent), nameof(LetterReceivedEvent))]
 [JsonDerivedType(typeof(PlayerEnteredGameEvent), nameof(PlayerEnteredGameEvent))]
+[JsonDerivedType(typeof(AetherObservationEvent), nameof(AetherObservationEvent))]
 public abstract record GameEvent(byte ServerId, DateTime TimestampUtc);

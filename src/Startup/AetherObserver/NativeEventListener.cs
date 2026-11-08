@@ -70,6 +70,9 @@ public sealed class NativeEventListener : IGameEventListener, IAsyncDisposable, 
             case AccountLoginBlockedEvent blocked:
                 this.Queue("security", blocked.ServerId, blocked.TimestampUtc, new { code = "account_login_blocked" });
                 break;
+            case AetherObservationEvent observed:
+                this.Queue(observed.Kind, observed.ServerId, observed.TimestampUtc, new { code = observed.Code });
+                break;
         }
 
         return ValueTask.CompletedTask;
@@ -84,6 +87,11 @@ public sealed class NativeEventListener : IGameEventListener, IAsyncDisposable, 
                 utcNow, new { count });
         }
     }
+
+    /// <summary>Observes admitted accounts separately from raw TCP connections.</summary>
+    public void ObserveSessions(DateTime utcNow, int count)
+        => this.Queue("sessions", byte.Parse(this._server, System.Globalization.CultureInfo.InvariantCulture),
+            utcNow, new { count });
 
     /// <summary>Reads the native scheduler. It never creates a timer or starts an event.</summary>
     /// <remarks>Pass only active, explicitly allowed plugins for this server, using its actual time zone.
@@ -112,7 +120,7 @@ public sealed class NativeEventListener : IGameEventListener, IAsyncDisposable, 
     /// <summary>Exports only sanitized host health/error codes. Not raw exception text.</summary>
     public void ObserveStatus(DateTime utcNow, string kind, string code)
     {
-        if (kind is not ("health" or "error" or "security") || code.Length is < 1 or > 100
+        if (kind is not ("health" or "error" or "security" or "lifecycle") || code.Length is < 1 or > 100
             || code.Any(c => !char.IsAsciiLetterOrDigit(c) && c is not ('_' or '.' or ':' or '-'))
             || (kind == "health" && code is not ("healthy" or "unhealthy" or "unknown")))
         {

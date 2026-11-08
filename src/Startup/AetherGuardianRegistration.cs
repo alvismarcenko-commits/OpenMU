@@ -50,7 +50,8 @@ internal static class AetherGuardianRegistration
                     .Select(plugin => (Plugin: plugin, Identity: plugin.GetType().GetCustomAttribute<GuidAttribute>()))
                     .Where(entry => entry.Identity is not null)
                     .ToDictionary(entry => Guid.Parse(entry.Identity!.Value), entry => entry.Plugin);
-                return new ObserverSnapshot(server.ServerState, active, server.Context.ServerTimeZone, server.CurrentConnections);
+                return new ObserverSnapshot(server.ServerState, active, server.Context.ServerTimeZone, server.CurrentConnections,
+                    (server.Context.LoginServer as MUnique.OpenMU.LoginServer.LoginServer)?.ActiveAccountCount);
             },
             TimeSpan.FromSeconds(10));
         services.AddSingleton<ILoggerProvider>(provider => new ObserverLoggerProvider(provider.GetRequiredService<NativeEventListener>()));

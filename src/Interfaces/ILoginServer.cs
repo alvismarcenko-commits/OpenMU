@@ -31,6 +31,14 @@ public interface ILoginServer
     /// <returns>The success.</returns>
     Task<bool> TryLoginAsync(string accountName, byte serverId);
 
+    /// <summary>Tries to register an authenticated connection from its server-observed network address.</summary>
+    /// <param name="accountName">Name of the account.</param>
+    /// <param name="serverId">The game server identifier.</param>
+    /// <param name="address">The normalized network address.</param>
+    /// <returns>Whether the account was admitted.</returns>
+    Task<bool> TryLoginFromAddressAsync(string accountName, byte serverId, string? address)
+        => this.TryLoginAsync(accountName, serverId);
+
     /// <summary>
     /// Logs the account off from the specified server.
     /// </summary>

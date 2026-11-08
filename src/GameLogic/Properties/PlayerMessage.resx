@@ -1130,5 +1130,12 @@ Inventory Extensions: {18}</value>
   <data name="PrestigeLegacyReviewRequired" xml:space="preserve"><value>This character requires a review of legacy Grand Reset bonuses before resetting. Your progress has not changed.</value></data>
 <data name="GrandResetUnavailable" xml:space="preserve"><value>Grand Reset is disabled, the character is busy, or fewer than 100 resets are available.</value></data>
 <data name="GrandResetCompleted" xml:space="preserve"><value>Grand Reset completed! Total: {0}. Permanent assignable bonus: {1} points.</value></data>
+  <data name="AetherBotHelp" xml:space="preserve"><value>AetherMU: /aether rules | /aether events | /resetinfo</value></data>
+  <data name="AetherBotRules" xml:space="preserve"><value>Play fairly. No cheating, account theft or harassment. Rules: aethermu.eu</value></data>
+  <data name="AetherBotEvents" xml:space="preserve"><value>Next UTC: Golden Invasion {0} | Treasure Hunt {1}</value></data>
+  <data name="AetherBotWelcome" xml:space="preserve"><value>Welcome to Ascension x100. Type /aether for help.</value></data>
+  <data name="AetherGoldenCountdown" xml:space="preserve"><value>Golden Invasion begins in {0} min.</value></data>
+  <data name="AetherTreasureStarted" xml:space="preserve"><value>Treasure Hunt: Find the Jewel of Chaos in {0}.</value></data>
+  <data name="AetherTreasureEnded" xml:space="preserve"><value>Treasure Hunt has ended.</value></data>
 </root>
 

@@ -619,6 +619,10 @@ public sealed partial class GameServer : IGameServer, IDisposable, IAsyncDisposa
             if (player.ReleaseLoginServerRegistration() is { } loginName)
             {
                 await this.Context.LoginServer.LogOffAsync(loginName, this.Id).ConfigureAwait(false);
+                if (Environment.GetEnvironmentVariable("AETHER_LOCAL_STAGING") == "true")
+                {
+                    await this.Context.EventPublisher.GameEventAsync(new AetherObservationEvent(this.Id, DateTime.UtcNow, "session", "logout")).ConfigureAwait(false);
+                }
             }
         }
         catch (Exception ex)

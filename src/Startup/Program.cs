@@ -234,9 +234,9 @@ internal sealed class Program : IDisposable
         Console.Write("> ");
         var input = (await Console.In.ReadLineAsync(exitToken).ConfigureAwait(false))?.ToLower();
 
-        if (input is not null && input.StartsWith("aether-golden-invasion ", StringComparison.Ordinal))
+        if (input is not null && input.StartsWith("aether-", StringComparison.Ordinal))
         {
-            await AetherInvasionCommand.RunAsync(input["aether-golden-invasion ".Length..], program._gameServers, exitToken).ConfigureAwait(false);
+            await AetherInvasionCommand.RunAsync(input, program._gameServers, exitToken).ConfigureAwait(false);
             return;
         }
 

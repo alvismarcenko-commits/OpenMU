@@ -4,6 +4,7 @@
 
 namespace MUnique.OpenMU.LoginServer;
 
+using System.Threading;
 using MUnique.OpenMU.Interfaces;
 using Nito.AsyncEx;
 
@@ -14,11 +15,16 @@ public class LoginServer : ILoginServer
 {
     private readonly Dictionary<string, byte> _connectedAccounts = new();
 
+    private readonly Dictionary<string, string> _connectedAddresses = new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly bool _limitAscensionConnections = Environment.GetEnvironmentVariable("AETHER_LOCAL_STAGING") == "true";
+
     private readonly Dictionary<string, Reservation> _reservations = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly AsyncLock _syncRoot = new();
 
     private readonly TimeProvider _time;
+    private int _activeAccountCount;
 
     /// <summary>Initializes a new instance of the <see cref="LoginServer"/> class.</summary>
     public LoginServer()
@@ -29,6 +35,9 @@ public class LoginServer : ILoginServer
     /// <summary>Initializes a new instance of the <see cref="LoginServer"/> class with an overridable clock.</summary>
     /// <param name="time">The clock used for administrative reservation expiry.</param>
     public LoginServer(TimeProvider time) => this._time = time;
+
+    /// <summary>Gets the number of accounts currently admitted to the login server.</summary>
+    public int ActiveAccountCount => Volatile.Read(ref this._activeAccountCount);
 
     /// <inheritdoc />
     public async ValueTask<bool> TryReserveAccountAsync(string accountName, int reservationId)
@@ -63,16 +72,34 @@ public class LoginServer : ILoginServer
     }
 
     /// <inheritdoc/>
-    public async Task<bool> TryLoginAsync(string accountName, byte serverId)
+    public Task<bool> TryLoginAsync(string accountName, byte serverId)
+        => this.TryLoginCoreAsync(accountName, serverId, null, enforceAddressLimit: false);
+
+    /// <inheritdoc />
+    public Task<bool> TryLoginFromAddressAsync(string accountName, byte serverId, string? address)
+        => this.TryLoginCoreAsync(accountName, serverId, address, this._limitAscensionConnections);
+
+    private async Task<bool> TryLoginCoreAsync(string accountName, byte serverId, string? address, bool enforceAddressLimit)
     {
-        using var l = await this._syncRoot.LockAsync();
+        using var l = await this._syncRoot.LockAsync().ConfigureAwait(false);
         this.RemoveExpiredReservation(accountName);
         if (this._connectedAccounts.ContainsKey(accountName) || this._reservations.ContainsKey(accountName))
         {
             return false;
         }
 
+        if (enforceAddressLimit)
+        {
+            if (string.IsNullOrEmpty(address) || this._connectedAddresses.Values.Count(value => value == address) >= 2)
+            {
+                return false;
+            }
+
+            this._connectedAddresses.Add(accountName, address);
+        }
+
         this._connectedAccounts.Add(accountName, serverId);
+        Volatile.Write(ref this._activeAccountCount, this._connectedAccounts.Count);
         return true;
     }
 
@@ -85,6 +112,8 @@ public class LoginServer : ILoginServer
         if (this._connectedAccounts.TryGetValue(accountName, out var currentServerId) && currentServerId == serverId)
         {
             this._connectedAccounts.Remove(accountName);
+            this._connectedAddresses.Remove(accountName);
+            Volatile.Write(ref this._activeAccountCount, this._connectedAccounts.Count);
         }
     }
 

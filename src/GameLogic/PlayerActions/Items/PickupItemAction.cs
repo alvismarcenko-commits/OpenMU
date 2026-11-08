@@ -230,6 +230,14 @@ public class PickupItemAction
         if (result.Success)
         {
             await player.OnPickedUpItemAsync(droppedItem).ConfigureAwait(false);
+            if (droppedItem.TreasureOccurrence is { } occurrence && player.GameContext is IGameServerContext server)
+            {
+                if (await player.SaveProgressAsync().ConfigureAwait(false))
+                {
+                    await server.EventPublisher.GameEventAsync(
+                        new AetherObservationEvent(server.Id, DateTime.UtcNow, "treasure_reward", occurrence.ToString("N"))).ConfigureAwait(false);
+                }
+            }
         }
         else
         {

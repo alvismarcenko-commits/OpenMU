@@ -71,6 +71,13 @@ public abstract class BaseInvasionPlugIn<TConfiguration> : PeriodicTaskBasePlugI
     /// <param name="y">The optional fixed Y coordinate.</param>
     protected async ValueTask CreateMonstersAsync(IGameContext gameContext, ILogger logger, GameMap gameMap, MonsterDefinition monsterDefinition, ushort quantity, bool announceDeath = false, byte? x = null, byte? y = null)
     {
+        if (x is { } fixedX && y is { } fixedY
+            && (!gameMap.Terrain.WalkMap[fixedX, fixedY] || gameMap.Terrain.SafezoneMap[fixedX, fixedY]))
+        {
+            logger.LogWarning("Skipping {Monster} on {Map}: the configured spawn cell is blocked or protected.", monsterDefinition.Designation, gameMap.Definition.Name);
+            return;
+        }
+
         for (var i = 0; i < quantity; i++)
         {
             Point? spawnPoint = (x.HasValue && y.HasValue)

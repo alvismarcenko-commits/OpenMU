@@ -109,6 +109,21 @@ await AetherStagingState.ReadAsync(dsn, false);
 if (args.Length != 0) { throw new ArgumentException("Only initialize-empty or serve (no arguments)."); }
 var token = Environment.GetEnvironmentVariable("AETHER_NATIVE_ACCOUNTS_TOKEN") ?? "";
 if (token.Length < 32 || token.Any(c => c > 127)) { throw new InvalidOperationException("Worker token missing."); }
+var readToken = Environment.GetEnvironmentVariable("AETHER_GAME_READER_TOKEN");
+var auditToken = Environment.GetEnvironmentVariable("AETHER_GUARDIAN_MIRROR_TOKEN");
+if (auditToken is { Length: 64 } && auditToken.All(char.IsAsciiHexDigit))
+{
+    await using var auditConnection = new NpgsqlConnection(dsn);
+    await auditConnection.OpenAsync().ConfigureAwait(false);
+    var migrationPath = Path.Combine(AppContext.BaseDirectory, "prestige", "004-live-audit.sql");
+    await using var auditMigration = new NpgsqlCommand(await File.ReadAllTextAsync(migrationPath).ConfigureAwait(false), auditConnection);
+    await auditMigration.ExecuteNonQueryAsync().ConfigureAwait(false);
+}
+else
+{
+    auditToken = null;
+}
+
 await new ConfigFileDatabaseConnectionStringProvider().InitializeAsync(default);
 using var authLogger = LoggerFactory.Create(_ => { });
 var authProvider = new PersistenceContextProvider(authLogger, null);
@@ -120,13 +135,47 @@ app.Use(async (ctx, next) =>
 {
     ctx.Response.Headers.CacheControl = "no-store";
     var presented = ctx.Request.Headers.Authorization.ToString();
+    var expected = ctx.Request.Path == "/live-audit" ? auditToken : token;
+    bool Matches(string? value) => value is not null && CryptographicOperations.FixedTimeEquals(
+        SHA256.HashData(Encoding.UTF8.GetBytes(presented)), SHA256.HashData(Encoding.UTF8.GetBytes("Bearer " + value)));
     if (!IPAddress.IsLoopback(ctx.Connection.RemoteIpAddress ?? IPAddress.None)
-        || !CryptographicOperations.FixedTimeEquals(SHA256.HashData(Encoding.UTF8.GetBytes(presented)), SHA256.HashData(Encoding.UTF8.GetBytes("Bearer " + token))))
+        || !(Matches(expected) || (ctx.Request.Path == "/profile" && readToken is { Length: 64 } && Matches(readToken))))
     { ctx.Response.StatusCode = 401; return; }
     try { await next(ctx); }
     catch (ArgumentException) { ctx.Response.StatusCode = 400; }
     catch (InvalidOperationException) { ctx.Response.StatusCode = 409; }
     catch (Exception exception) { await Console.Error.WriteLineAsync(exception.GetType().FullName + "\n" + exception.StackTrace).ConfigureAwait(false); ctx.Response.StatusCode = 503; }
+});
+app.MapPost("/live-audit", async (HttpContext ctx) =>
+{
+    var body = await JsonSerializer.DeserializeAsync<JsonElement>(ctx.Request.Body, cancellationToken: ctx.RequestAborted).ConfigureAwait(false);
+    var id = body.GetProperty("id").GetString();
+    var kind = body.GetProperty("kind").GetString();
+    var at = body.GetProperty("at").GetDateTimeOffset();
+    if (id is not { Length: 64 } || !id.All(char.IsAsciiHexDigit)
+        || kind is not ("invasion_started" or "invasion_ended" or "treasure_started" or "treasure_ended" or "treasure_reward"
+            or "session" or "player_entered" or "security" or "error" or "lifecycle" or "gm_bot")
+        || body.GetProperty("realm").GetString() != "ascension" || body.GetProperty("server").GetString() != "0")
+    {
+        return Results.BadRequest();
+    }
+
+    await using var auditConnection = new NpgsqlConnection(dsn);
+    await auditConnection.OpenAsync(ctx.RequestAborted).ConfigureAwait(false);
+    const string sql = """
+        INSERT INTO aether_staging.live_event_audit(id, occurred_at, kind, payload)
+        VALUES (@id, @at, @kind, CAST(@payload AS jsonb))
+        ON CONFLICT (id) DO UPDATE SET id = EXCLUDED.id
+        WHERE aether_staging.live_event_audit.payload = EXCLUDED.payload
+        """;
+    await using var command = new NpgsqlCommand(sql, auditConnection);
+    command.Parameters.AddWithValue("id", id);
+    command.Parameters.AddWithValue("at", at.UtcDateTime);
+    command.Parameters.AddWithValue("kind", kind);
+    command.Parameters.AddWithValue("payload", body.GetRawText());
+    return await command.ExecuteNonQueryAsync(ctx.RequestAborted).ConfigureAwait(false) == 1
+        ? Results.Json(new { status = "recorded" })
+        : Results.Conflict();
 });
 app.MapGet("/health", async () => await AetherStagingState.ReadAsync(dsn, false));
 app.MapPost("/snapshot", async () => await AetherStagingState.ReadAsync(dsn, true));

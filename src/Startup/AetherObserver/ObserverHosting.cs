@@ -9,7 +9,7 @@ using MUnique.OpenMU.Interfaces;
 
 /// <summary>A snapshot read by the host; plugins must already be server-filtered and active.</summary>
 public sealed record ObserverSnapshot(ServerState State,
-    IReadOnlyDictionary<Guid, IScheduledPlugIn> ActivePlugins, TimeZoneInfo TimeZone, int? Connections = null);
+    IReadOnlyDictionary<Guid, IScheduledPlugIn> ActivePlugins, TimeZoneInfo TimeZone, int? Connections = null, int? Sessions = null);
 
 /// <summary>Explicit opt-in composition. Never starts a game server or modifies native configuration.</summary>
 public static class ObserverHosting
@@ -41,6 +41,8 @@ public static class ObserverHosting
 public sealed class ObserverWorker(NativeEventListener observer, Func<ObserverSnapshot> readSnapshot,
     TimeSpan interval) : BackgroundService
 {
+    private bool _announcedStart;
+
     public void PollOnce(DateTime utcNow)
     {
         try
@@ -55,6 +57,15 @@ public sealed class ObserverWorker(NativeEventListener observer, Func<ObserverSn
             if (snapshot.Connections is { } count)
             {
                 observer.ObserveConnections(utcNow, count);
+            }
+            if (snapshot.Sessions is { } sessions)
+            {
+                observer.ObserveSessions(utcNow, sessions);
+            }
+            if (snapshot.State == ServerState.Started && !this._announcedStart)
+            {
+                observer.ObserveStatus(utcNow, "lifecycle", "server_started");
+                this._announcedStart = true;
             }
             observer.ObserveCalendar(snapshot.ActivePlugins, utcNow, snapshot.TimeZone);
         }
