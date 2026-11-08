@@ -243,13 +243,19 @@ public abstract class BaseInvasionPlugIn<TConfiguration> : PeriodicTaskBasePlugI
     /// <inheritdoc />
     protected override async ValueTask OnPreparedAsync(InvasionGameServerState state)
     {
-        await state.Context.ForEachPlayerAsync(p => this.TrySendStartMessageAsync(p, state)).ConfigureAwait(false);
+        if (this.AnnounceWhenPrepared)
+        {
+            await state.Context.ForEachPlayerAsync(p => this.TrySendStartMessageAsync(p, state)).ConfigureAwait(false);
+        }
 
         if (this.EventType is not null)
         {
             await state.Context.ForEachPlayerAsync(p => this.TrySendMapEventStateUpdateAsync(p, state)).ConfigureAwait(false);
         }
     }
+
+    /// <summary>Gets a value indicating whether the preparation stage also announces the invasion.</summary>
+    protected virtual bool AnnounceWhenPrepared => true;
 
     /// <inheritdoc />
     protected override async ValueTask OnStartedAsync(InvasionGameServerState state)

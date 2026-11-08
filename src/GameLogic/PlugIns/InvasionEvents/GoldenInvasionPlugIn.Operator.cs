@@ -29,7 +29,6 @@ public sealed partial class GoldenInvasionPlugIn
         }
 
         this._operatorPending = true;
-        this.ForceStart();
         return true;
     }
 
@@ -42,7 +41,13 @@ public sealed partial class GoldenInvasionPlugIn
         var state = this.GetStateByGameContext(context);
         if (state.State == PeriodicTaskState.NotStarted)
         {
-            return this._operatorPending ? "start_pending" : "inactive";
+            if (!this._operatorPending)
+            {
+                return "inactive";
+            }
+
+            this._operatorPending = false;
+            return "stopped";
         }
 
         var started = state.State == PeriodicTaskState.Started;
@@ -88,6 +93,11 @@ public sealed partial class GoldenInvasionPlugIn
                 }
             }
 
+            if (this._operatorPending && !AetherEventEmergency.IsDisabled())
+            {
+                this.ForceStart();
+            }
+
             await base.ExecuteTaskAsync(gameContext).ConfigureAwait(false);
         }
         finally
@@ -95,6 +105,9 @@ public sealed partial class GoldenInvasionPlugIn
             this._operatorPending = false;
         }
     }
+
+    /// <inheritdoc />
+    protected override bool AnnounceWhenPrepared => Environment.GetEnvironmentVariable("AETHER_LOCAL_STAGING") != "true";
 
     /// <inheritdoc />
     protected override async ValueTask OnStartedAsync(InvasionGameServerState state)

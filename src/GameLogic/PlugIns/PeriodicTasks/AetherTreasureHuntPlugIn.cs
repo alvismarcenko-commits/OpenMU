@@ -50,13 +50,18 @@ public sealed class AetherTreasureHuntPlugIn : PeriodicTaskBasePlugIn<PeriodicTa
             }
 
             this._pending = true;
-            this.ForceStart();
             return "requested";
         }
 
         if (state.State == PeriodicTaskState.NotStarted)
         {
-            return this._pending ? "start_pending" : "inactive";
+            if (!this._pending)
+            {
+                return "inactive";
+            }
+
+            this._pending = false;
+            return "stopped";
         }
 
         var started = state.State == PeriodicTaskState.Started;
@@ -89,6 +94,11 @@ public sealed class AetherTreasureHuntPlugIn : PeriodicTaskBasePlugIn<PeriodicTa
                 this._originalTimetable ??= this.Configuration.Timetable;
                 this.Configuration.Timetable = AetherLiveSettings.ParseSchedule(settings.TreasureTimes) ?? this._originalTimetable;
                 this._settings = settings;
+            }
+
+            if (this._pending && !AetherEventEmergency.IsDisabled())
+            {
+                this.ForceStart();
             }
 
             await base.ExecuteTaskAsync(gameContext).ConfigureAwait(false);
