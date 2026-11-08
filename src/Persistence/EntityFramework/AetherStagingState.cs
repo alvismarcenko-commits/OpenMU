@@ -7,6 +7,17 @@ using Npgsql;
 
 public static class AetherStagingState
 {
+    /// <summary>Gets the dedicated gameplay candidate profile flag.</summary>
+    public static bool IsCompletePlayable => Environment.GetEnvironmentVariable("AETHER_STAGE_PROFILE") == "complete-playable";
+
+    /// <summary>Gets the listener offset from the original staging ports.</summary>
+    public static int PortOffset => Environment.GetEnvironmentVariable("AETHER_STAGE_PROFILE") switch
+    {
+        "first-playable" => 1000,
+        "complete-playable" => 2000,
+        _ => 0,
+    };
+
     public static string Nonce(string dsn)
     {
         var b = new NpgsqlConnectionStringBuilder(dsn);
@@ -41,12 +52,13 @@ public static class AetherStagingState
              (SELECT count(*) FROM config."GameServerDefinition" WHERE "ExperienceRate"=1),
              (SELECT count(*) FROM config."ConnectServerDefinition" WHERE "ClientListenerPort"=@connect),
              (SELECT count(*) FROM config."GameServerEndpoint" WHERE "NetworkPort"=@game),
-             (SELECT count(*) FROM aether_prestige.rules WHERE app_per_gr=100 AND revision>=2 AND NOT activated
+             (SELECT count(*) FROM aether_prestige.rules WHERE app_per_gr=100 AND revision>=2 AND activated=(@playable AND realm='ascension')
                 AND resets_required=(CASE realm WHEN 'origin' THEN 25 WHEN 'legacy' THEN 50 WHEN 'evolution' THEN 75 WHEN 'ascension' THEN 100 END)),
              (SELECT count(*) FROM data."Character"),
              (SELECT count(*) FROM config."SystemConfiguration" WHERE "ReadConsoleInput" AND "AutoStart" AND NOT "AutoUpdateSchema" AND "IpResolverParameter"='127.0.0.1')
             """, connection);
-        var offset = Environment.GetEnvironmentVariable("AETHER_STAGE_PROFILE") == "first-playable" ? 1000 : 0;
+        var offset = PortOffset;
+        command.Parameters.AddWithValue("playable", IsCompletePlayable);
         command.Parameters.AddWithValue("connect", 44406 + offset);
         command.Parameters.AddWithValue("game", 45902 + offset);
         long characters;
@@ -55,7 +67,7 @@ public static class AetherStagingState
             if (!await reader.ReadAsync().ConfigureAwait(false) || reader.GetString(0) != nonce
                 || reader.GetInt64(1) != 1 || reader.GetInt64(2) != 1 || reader.GetInt64(3) != 1
                 || reader.GetInt64(4) != 1 || reader.GetInt64(5) != 4 || reader.GetInt64(7) != 1)
-            { throw new InvalidOperationException("Native Ascension configuration or inactive Prestige rules mismatch."); }
+            { throw new InvalidOperationException("Native Ascension configuration or Prestige rules mismatch."); }
             characters = reader.GetInt64(6);
         }
         string? digest = null;
@@ -73,7 +85,7 @@ public static class AetherStagingState
         }
         return new { status = "READY", instance = nonce, realm = "ascension", character_count = characters,
             progress_fingerprint = digest, connect_host = "127.0.0.1", connect_port = 44406 + offset, game_port = 45902 + offset,
-            exp = 100, master_exp = 100, app_per_gr = 100, stat_bonus = 0, rates_approved = false, native_enabled = false,
+            exp = 100, master_exp = 100, app_per_gr = 100, stat_bonus = 0, rates_approved = false, native_enabled = IsCompletePlayable,
             client_acceptance = "MANUAL REQUIRED" };
     }
 }

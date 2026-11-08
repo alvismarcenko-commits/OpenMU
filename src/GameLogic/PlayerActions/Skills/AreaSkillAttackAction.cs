@@ -154,16 +154,21 @@ public class AreaSkillAttackAction
 
     private async ValueTask PerformAutomaticHitsAsync(Player player, ushort extraTargetId, Point targetAreaCenter, SkillEntry skillEntry, Skill skill, byte rotation)
     {
-        bool isCombo = false;
-        if (player.ComboState is { } comboState)
-        {
-            isCombo = await comboState.RegisterSkillAsync(skill).ConfigureAwait(false);
-        }
-
         var effectiveRotation = AreaSkillTargetSelector.CorrectRotationForLockedTarget(player, skill, extraTargetId, rotation);
 
         IAttackable? extraTarget = null;
-        var targets = AreaSkillTargetSelector.GetTargets(player, targetAreaCenter, skill, effectiveRotation, extraTargetId);
+        IEnumerable<IAttackable> targets = AreaSkillTargetSelector.GetTargets(player, targetAreaCenter, skill, effectiveRotation, extraTargetId);
+        bool isCombo = false;
+        if (player.ComboState is { } comboState && player.IsActive() && !player.IsAtSafezone())
+        {
+            // Use the same server-selected targets for sequence advancement and damage.
+            var attackableTargets = targets.Where(target => target.IsActive()).ToList();
+            targets = attackableTargets;
+            if (attackableTargets.Count > 0)
+            {
+                isCombo = await comboState.RegisterSkillAsync(skill).ConfigureAwait(false);
+            }
+        }
         if (skill.AreaSkillSettings is not { } areaSkillSettings
             || AreaSkillSettingsAreDefault(areaSkillSettings))
         {

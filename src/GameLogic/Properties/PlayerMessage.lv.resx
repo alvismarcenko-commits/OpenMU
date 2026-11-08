@@ -22,4 +22,8 @@
   <data name="BuildPresetSaved" xml:space="preserve"><value>Komplekts saglabāts vietā {0}.</value></data>
   <data name="BuildPresetDoesNotFit" xml:space="preserve"><value>Komplektam vajag atbilstošu klasi, status un pietiekami brīvu punktu.</value></data>
   <data name="BuildPresetApplied" xml:space="preserve"><value>Pielietots komplekts no vietas {0}.</value></data>
+  <data name="AetherBossStarted" xml:space="preserve"><value>Bosa medības: {0} parādījās kartē {1} ({2}, {3}).</value></data>
+  <data name="AetherBossDefeated" xml:space="preserve"><value>{1} pieveica {0}. Uzvarētājam ir divas minūtes balvas pacelšanai.</value></data>
+  <data name="AetherBossEnded" xml:space="preserve"><value>Bosa medības beigušās.</value></data>
+  <data name="AetherBossRewardSaved" xml:space="preserve"><value>Bosa medības: {0} saglabāts inventārā.</value></data>
 </root>

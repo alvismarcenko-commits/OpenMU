@@ -1151,5 +1151,9 @@ Inventory Extensions: {18}</value>
   <data name="BuildPresetSaved" xml:space="preserve"><value>Build saved in slot {0}.</value></data>
   <data name="BuildPresetDoesNotFit" xml:space="preserve"><value>This build requires matching class, stats and enough free points.</value></data>
   <data name="BuildPresetApplied" xml:space="preserve"><value>Build applied from slot {0}.</value></data>
+  <data name="AetherBossStarted" xml:space="preserve"><value>Boss hunt: {0} appeared in {1} ({2}, {3}).</value></data>
+  <data name="AetherBossDefeated" xml:space="preserve"><value>{1} defeated {0}. The winner has two minutes to collect the reward.</value></data>
+  <data name="AetherBossEnded" xml:space="preserve"><value>The boss hunt has ended.</value></data>
+  <data name="AetherBossRewardSaved" xml:space="preserve"><value>Boss hunt: {0} was saved in your inventory.</value></data>
 </root>
 

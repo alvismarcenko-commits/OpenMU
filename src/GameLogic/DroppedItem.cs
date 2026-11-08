@@ -76,6 +76,8 @@ public sealed class DroppedItem : AsyncDisposable, ILocateable
 
     internal Guid? TreasureOccurrence { get; init; }
 
+    internal bool IsRaidReward { get; init; }
+
     internal async ValueTask ExpireTreasureAsync()
     {
         using (await this._pickupLock.LockAsync().ConfigureAwait(false))
@@ -105,7 +107,7 @@ public sealed class DroppedItem : AsyncDisposable, ILocateable
     /// <summary>
     /// Gets a value indicating whether the owner-pickup priority period is still active.
     /// </summary>
-    public bool IsOwnerPickupPriorityActive => DateTime.UtcNow < this._dropTimestamp.Add(TimeUntilDropIsFree);
+    public bool IsOwnerPickupPriorityActive => this.IsRaidReward || DateTime.UtcNow < this._dropTimestamp.Add(TimeUntilDropIsFree);
 
     /// <summary>
     /// Tries to pick the item up by the specified player.
@@ -146,8 +148,7 @@ public sealed class DroppedItem : AsyncDisposable, ILocateable
             return (false, stackTarget);
         }
 
-        if (!this.IsPlayerAnOwner(player)
-            && DateTime.UtcNow < this._dropTimestamp.Add(TimeUntilDropIsFree))
+        if (!this.IsPlayerAnOwner(player) && this.IsOwnerPickupPriorityActive)
         {
             return (false, stackTarget);
         }

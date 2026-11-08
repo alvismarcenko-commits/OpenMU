@@ -235,11 +235,20 @@ public class PickupItemAction
             if (droppedItem.TreasureOccurrence is { } occurrence
                 && await player.SaveProgressAsync().ConfigureAwait(false))
             {
-                await player.ShowLocalizedBlueMessageAsync("AetherTreasureRewardSaved").ConfigureAwait(false);
+                if (droppedItem.IsRaidReward)
+                {
+                    await player.ShowLocalizedBlueMessageAsync("AetherBossRewardSaved",
+                        droppedItem.Item.Definition?.Name.GetTranslation(player.Culture)).ConfigureAwait(false);
+                }
+                else
+                {
+                    await player.ShowLocalizedBlueMessageAsync("AetherTreasureRewardSaved").ConfigureAwait(false);
+                }
                 if (player.GameContext is IGameServerContext server)
                 {
                     await server.EventPublisher.GameEventAsync(
-                        new AetherObservationEvent(server.Id, DateTime.UtcNow, "treasure_reward", occurrence.ToString("N"))).ConfigureAwait(false);
+                        new AetherObservationEvent(server.Id, DateTime.UtcNow,
+                            droppedItem.IsRaidReward ? "boss_reward" : "treasure_reward", occurrence.ToString("N"))).ConfigureAwait(false);
                 }
             }
         }

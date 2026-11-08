@@ -26,6 +26,12 @@ internal sealed class AetherLiveSettings
 
     public int[]? TreasureLocation { get; init; }
 
+    public int[]? BossLocation { get; init; }
+
+    public int? BossMonster { get; init; }
+
+    public int[]? BossReward { get; init; }
+
     public Dictionary<string, string>? GmMessages { get; init; }
 
     internal static IList<TimeOnly>? ParseSchedule(string[]? times)

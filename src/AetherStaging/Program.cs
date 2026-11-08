@@ -13,6 +13,7 @@ using MUnique.OpenMU.DataModel.Configuration;
 using MUnique.OpenMU.Network;
 using Npgsql;
 using MUnique.OpenMU.GameLogic.PlugIns.GameEvents;
+using MUnique.OpenMU.GameLogic.PlugIns.PeriodicTasks;
 using MUnique.OpenMU.GameLogic.Resets;
 using MUnique.OpenMU.GameLogic.Attributes;
 using MUnique.OpenMU.PlugIns;
@@ -53,13 +54,24 @@ if (args.SequenceEqual(new[] { "initialize-empty" }))
     system.AutoStart = true; system.AutoUpdateSchema = false; system.ReadConsoleInput = true;
     var reset = (await context.GetAsync<PlugInConfiguration>()).Single(p => p.TypeId == typeof(ResetFeaturePlugIn).GUID);
     var resetConfig = System.Text.Json.Nodes.JsonNode.Parse(reset.CustomConfiguration ?? "{}")!.AsObject();
-    resetConfig["GrandResetEnabled"] = true; resetConfig["PrestigeEnabled"] = false;
+    var completePlayable = AetherStagingState.IsCompletePlayable;
+    resetConfig["GrandResetEnabled"] = true; resetConfig["PrestigeEnabled"] = completePlayable;
     resetConfig["PrestigeRealm"] = "ascension"; resetConfig["PrestigeResetsRequired"] = 100;
     resetConfig["LevelAfterGrandReset"] = 1; resetConfig["PrestigeDeliveryEnabled"] = false;
     resetConfig["ResetStats"] = true; resetConfig["ReplacePointsPerReset"] = true;
     reset.CustomConfiguration = resetConfig.ToJsonString();
-    // Rule configured, economy deliberately inactive pending separate acceptance and approval.
-    if (Environment.GetEnvironmentVariable("AETHER_STAGE_PROFILE") == "first-playable")
+    if (completePlayable)
+    {
+        reset.IsActive = true;
+        var plugins = await context.GetAsync<PlugInConfiguration>();
+        foreach (var plugin in plugins.Where(p => p.TypeId == typeof(GrandResetChatCommandPlugIn).GUID
+                     || p.TypeId == typeof(ResetChatCommandPlugIn).GUID || p.TypeId == typeof(AetherBossRaidPlugIn).GUID))
+        {
+            plugin.IsActive = true;
+        }
+    }
+    var offset = AetherStagingState.PortOffset;
+    if (offset != 0)
     {
         var events = (await context.GetAsync<PlugInConfiguration>()).Single(p => p.TypeId == typeof(GameEventPublisherPlugIn).GUID);
         events.IsActive = true;
@@ -75,11 +87,11 @@ if (args.SequenceEqual(new[] { "initialize-empty" }))
             PublishLevelMilestones = false,
             PublishChatMessages = false,
         });
-        foreach (var connect in await context.GetAsync<ConnectServerDefinition>()) { connect.ClientListenerPort += 1000; }
-        foreach (var endpoint in server.Endpoints) { endpoint.NetworkPort += 1000; }
+        foreach (var connect in await context.GetAsync<ConnectServerDefinition>()) { connect.ClientListenerPort += offset; }
+        foreach (var endpoint in server.Endpoints) { endpoint.NetworkPort += offset; }
         foreach (var chat in await context.GetAsync<ChatServerDefinition>())
         {
-            foreach (var endpoint in chat.Endpoints) { endpoint.NetworkPort += 1000; }
+            foreach (var endpoint in chat.Endpoints) { endpoint.NetworkPort += offset; }
         }
     }
     system.IpResolver = IpResolverType.Custom; system.IpResolverParameter = "127.0.0.1";
@@ -91,13 +103,40 @@ if (args.SequenceEqual(new[] { "initialize-empty" }))
             await using var migration = new NpgsqlCommand(await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "prestige", file)), connection, transaction);
             await migration.ExecuteNonQueryAsync();
         }
+        if (completePlayable)
+        {
+            await using var activate = new NpgsqlCommand("UPDATE aether_prestige.rules SET activated=true WHERE realm='ascension' AND resets_required=100 AND app_per_gr=100", connection, transaction);
+            if (await activate.ExecuteNonQueryAsync() != 1) { throw new InvalidOperationException("Missing approved Ascension GR rule."); }
+        }
         await transaction.CommitAsync();
     }
     await accounts.InitializeAsync();
+    await accounts.InitializeSharedCredentialsAsync();
+    if (completePlayable)
+    {
+        // This trigger is installed only on a verified empty candidate. It never
+        // approves imported characters or reassigns an existing Prestige record.
+        await using var enroll = new NpgsqlCommand("""
+            CREATE FUNCTION aether_staging_enroll_character() RETURNS trigger
+            LANGUAGE plpgsql SET search_path = pg_catalog AS $$
+            BEGIN
+                INSERT INTO aether_prestige.characters(realm, character_id, website_owner, game_account, name, migration_state)
+                SELECT 'ascension', NEW."Id", link.owner, link.login, NEW."Name", 'approved'
+                FROM aether_accounts.links link WHERE link.account_id=NEW."AccountId" AND NOT link.revoked
+                ON CONFLICT (realm, character_id) DO NOTHING;
+                RETURN NEW;
+            END;
+            $$;
+            CREATE TRIGGER aether_prestige_enroll
+            AFTER INSERT OR UPDATE OF "AccountId" ON data."Character"
+            FOR EACH ROW EXECUTE FUNCTION aether_staging_enroll_character();
+            """, connection);
+        await enroll.ExecuteNonQueryAsync();
+    }
     await using var marker = new NpgsqlCommand("CREATE SCHEMA aether_staging; CREATE TABLE aether_staging.instance(singleton boolean PRIMARY KEY CHECK(singleton),nonce text NOT NULL); INSERT INTO aether_staging.instance VALUES(true,@nonce)", connection);
     marker.Parameters.AddWithValue("nonce", AetherStagingState.Nonce(dsn));
     await marker.ExecuteNonQueryAsync();
-    Console.WriteLine("CONFIGURED: Season 6 Ep3, EXP/master x100, one game server; no gameplay verification, no test accounts, no Prestige activation.");
+    Console.WriteLine($"CONFIGURED: Season 6 Ep3, EXP/master x100, one game server, Ascension Prestige enabled={completePlayable}.");
     return;
 }
 if (args.SequenceEqual(new[] { "validate-state" }))
@@ -109,6 +148,7 @@ await AetherStagingState.ReadAsync(dsn, false);
 if (args.Length != 0) { throw new ArgumentException("Only initialize-empty or serve (no arguments)."); }
 var token = Environment.GetEnvironmentVariable("AETHER_NATIVE_ACCOUNTS_TOKEN") ?? "";
 if (token.Length < 32 || token.Any(c => c > 127)) { throw new InvalidOperationException("Worker token missing."); }
+await accounts.InitializeSharedCredentialsAsync();
 var readToken = Environment.GetEnvironmentVariable("AETHER_GAME_READER_TOKEN");
 var auditToken = Environment.GetEnvironmentVariable("AETHER_GUARDIAN_MIRROR_TOKEN");
 if (auditToken is { Length: 64 } && auditToken.All(char.IsAsciiHexDigit))
@@ -129,7 +169,7 @@ using var authLogger = LoggerFactory.Create(_ => { });
 var authProvider = new PersistenceContextProvider(authLogger, null);
 var builder = WebApplication.CreateBuilder(Array.Empty<string>());
 builder.Logging.ClearProviders(); // Do not log request bodies, credentials, DB errors or provisioning identities.
-builder.WebHost.ConfigureKestrel(k => { k.Listen(IPAddress.Loopback, Environment.GetEnvironmentVariable("AETHER_STAGE_PROFILE") == "first-playable" ? 18863 : 17863); k.Limits.MaxRequestBodySize = 4096; });
+builder.WebHost.ConfigureKestrel(k => { k.Listen(IPAddress.Loopback, 17863 + AetherStagingState.PortOffset); k.Limits.MaxRequestBodySize = 4096; });
 var app = builder.Build();
 app.Use(async (ctx, next) =>
 {
@@ -154,6 +194,7 @@ app.MapPost("/live-audit", async (HttpContext ctx) =>
     var at = body.GetProperty("at").GetDateTimeOffset();
     if (id is not { Length: 64 } || !id.All(char.IsAsciiHexDigit)
         || kind is not ("invasion_started" or "invasion_ended" or "treasure_started" or "treasure_ended" or "treasure_reward"
+            or "boss_started" or "boss_defeated" or "boss_ended" or "boss_reward"
             or "session" or "player_entered" or "security" or "error" or "lifecycle" or "gm_bot")
         || body.GetProperty("realm").GetString() != "ascension" || body.GetProperty("server").GetString() != "0")
     {
@@ -201,8 +242,9 @@ app.MapPost("/create", async (HttpContext ctx) =>
     var owner = body.GetProperty("owner").GetInt64();
     var operation = body.GetProperty("operation").GetGuid();
     var login = body.GetProperty("login").GetString()!;
-    var password = body.GetProperty("password").GetString()!;
-    var id = await accounts.CreateAsync(owner, operation, login, password);
+    var id = body.TryGetProperty("password_hash", out var verifier)
+        ? await accounts.CreateSharedAsync(owner, operation, login, verifier.GetString() ?? "")
+        : await accounts.CreateAsync(owner, operation, login, body.GetProperty("password").GetString() ?? "");
     await ctx.Response.WriteAsJsonAsync(new { account_id = id, login });
 });
 app.MapPost("/revoke", async (HttpContext ctx) =>
@@ -218,11 +260,15 @@ app.MapPost("/profile", async (HttpContext ctx) =>
         Stats.Level.Id, Stats.Resets.Id, Stats.GrandResets.Id);
     return profile is null ? Results.NotFound() : Results.Json(profile);
 });
+app.MapPost("/rankings", async () => await accounts.RankingsAsync(Stats.Level.Id, Stats.Resets.Id, Stats.GrandResets.Id));
 app.MapPost("/password", async (HttpContext ctx) =>
 {
     var body = await JsonSerializer.DeserializeAsync<JsonElement>(ctx.Request.Body);
-    var changed = await accounts.ChangePasswordAsync(body.GetProperty("owner").GetInt64(), body.GetProperty("account_id").GetGuid(),
-        body.GetProperty("password").GetString() ?? string.Empty);
+    var owner = body.GetProperty("owner").GetInt64();
+    var accountId = body.GetProperty("account_id").GetGuid();
+    var changed = body.TryGetProperty("password_hash", out var verifier)
+        ? await accounts.ChangeSharedPasswordAsync(owner, accountId, verifier.GetString() ?? "", body.GetProperty("revision").GetInt64())
+        : await accounts.ChangePasswordAsync(owner, accountId, body.GetProperty("password").GetString() ?? "");
     return changed ? Results.Json(new { status = "password_changed" }) : Results.Conflict();
 });
 await app.RunAsync();
