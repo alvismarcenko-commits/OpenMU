@@ -1155,5 +1155,17 @@ Inventory Extensions: {18}</value>
   <data name="AetherBossDefeated" xml:space="preserve"><value>{1} defeated {0}. The winner has two minutes to collect the reward.</value></data>
   <data name="AetherBossEnded" xml:space="preserve"><value>The boss hunt has ended.</value></data>
   <data name="AetherBossRewardSaved" xml:space="preserve"><value>Boss hunt: {0} was saved in your inventory.</value></data>
+  <data name="AetherUiPrestige" xml:space="preserve"><value>Aether Prestige</value></data>
+  <data name="AetherUiPrestigeSnapshot" xml:space="preserve"><value>{0} | Level {1}&#10;Reset {2}/{3} | GR {4}&#10;APP {5}&#10;Select refresh for current data.</value></data>
+  <data name="AetherUiPrestigeUnavailable" xml:space="preserve"><value>Prestige is unavailable for this character.</value></data>
+  <data name="AetherUiAction" xml:space="preserve"><value>Action</value></data>
+  <data name="AetherUiGrandReset" xml:space="preserve"><value>Grand Reset</value></data>
+  <data name="AetherUiGrandResetDetails" xml:space="preserve"><value>100 APP. Level 1, Reset 0. Keeps your items. Select confirm to continue.</value></data>
+  <data name="AetherUiBuildSave" xml:space="preserve"><value>Build: save</value></data>
+  <data name="AetherUiBuildApply" xml:space="preserve"><value>Build: apply</value></data>
+  <data name="AetherUiBuildDetails" xml:space="preserve"><value>Use a slot from 1 to 3 in a safe zone. Applying uses ordinary stat points.</value></data>
+  <data name="AetherUiSlot" xml:space="preserve"><value>Slot</value></data>
+  <data name="AetherUiHunt" xml:space="preserve"><value>Treasure Hunt</value></data>
+  <data name="AetherUiEvents" xml:space="preserve"><value>Event schedule</value></data>
 </root>
 

@@ -29,7 +29,12 @@ public class GrandResetChatCommandPlugIn : IChatCommandPlugIn, IDisabledByDefaul
     /// <inheritdoc />
     public async ValueTask HandleCommandAsync(Player player, string command)
     {
+        if (command.Trim() is not (Command or Command + " confirm"))
+        {
+            return;
+        }
+
         var resetAction = new GrandResetCharacterAction(player);
         await resetAction.GrandResetCharacterAsync().ConfigureAwait(false);
     }
-}
+}

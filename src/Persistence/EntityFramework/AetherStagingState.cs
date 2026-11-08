@@ -8,13 +8,14 @@ using Npgsql;
 public static class AetherStagingState
 {
     /// <summary>Gets the dedicated gameplay candidate profile flag.</summary>
-    public static bool IsCompletePlayable => Environment.GetEnvironmentVariable("AETHER_STAGE_PROFILE") == "complete-playable";
+    public static bool IsCompletePlayable => Environment.GetEnvironmentVariable("AETHER_STAGE_PROFILE") is "complete-playable" or "prestige-ui";
 
     /// <summary>Gets the listener offset from the original staging ports.</summary>
     public static int PortOffset => Environment.GetEnvironmentVariable("AETHER_STAGE_PROFILE") switch
     {
         "first-playable" => 1000,
         "complete-playable" => 2000,
+        "prestige-ui" => 3000,
         _ => 0,
     };
 

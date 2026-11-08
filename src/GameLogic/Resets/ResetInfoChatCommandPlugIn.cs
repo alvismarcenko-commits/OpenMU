@@ -44,6 +44,13 @@ public class ResetInfoChatCommandPlugIn : IChatCommandPlugIn
             return;
         }
 
+        if (string.Equals(command.Trim(), Command + " app refresh", StringComparison.OrdinalIgnoreCase)
+            && Environment.GetEnvironmentVariable("AETHER_LOCAL_STAGING") == "true")
+        {
+            await AetherCommandCatalog.SendAsync(player).ConfigureAwait(false);
+            return;
+        }
+
         if (string.Equals(command.Trim(), Command + " app", StringComparison.OrdinalIgnoreCase))
         {
             await ShowAppAsync(player, configuration).ConfigureAwait(false);
@@ -89,7 +96,7 @@ public class ResetInfoChatCommandPlugIn : IChatCommandPlugIn
             .ConfigureAwait(false);
     }
 
-    private static async ValueTask ShowAppAsync(Player player, ResetConfiguration configuration)
+    internal static async ValueTask<(string GrandResets, string Balance)?> ReadAppAsync(Player player, ResetConfiguration configuration)
     {
         if (configuration is { PrestigeEnabled: true, GrandResetEnabled: true }
             && player.SelectedCharacter is { } character
@@ -97,19 +104,26 @@ public class ResetInfoChatCommandPlugIn : IChatCommandPlugIn
         {
             try
             {
-                var status = await player.RunPersistenceExclusiveAsync(
+                return await player.RunPersistenceExclusiveAsync(
                     () => persistence.ReadPrestigeAsync(character, configuration.PrestigeRealm)).ConfigureAwait(false);
-                if (status is { } value)
-                {
-                    await player.ShowLocalizedBlueMessageAsync("PrestigeCharacterBalance", configuration.PrestigeRealm,
-                        value.GrandResets, value.Balance).ConfigureAwait(false);
-                    return;
-                }
             }
             catch (Exception ex) when (ex is DbException or InvalidOperationException)
             {
                 player.Logger.LogWarning(ex, "Unable to load the selected character's Prestige status.");
             }
+        }
+
+        return null;
+    }
+
+    private static async ValueTask ShowAppAsync(Player player, ResetConfiguration configuration)
+    {
+        var status = await ReadAppAsync(player, configuration).ConfigureAwait(false);
+        if (status is { } value)
+        {
+            await player.ShowLocalizedBlueMessageAsync("PrestigeCharacterBalance", configuration.PrestigeRealm,
+                value.GrandResets, value.Balance).ConfigureAwait(false);
+            return;
         }
 
         await player.ShowLocalizedBlueMessageAsync("PrestigeBalanceUnavailable").ConfigureAwait(false);

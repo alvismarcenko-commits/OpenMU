@@ -1742,7 +1742,7 @@
     <value>Tells game clients which ask for it how the server is connected to Discord (invite link, Rich Presence application, account link, mirrored chats), lets players link their account from the client, and sends them messages written in Discord as such.</value>
   </data>
   <data name="GrandResetChatCommandPlugIn_Name" xml:space="preserve"><value>Grand Reset command</value></data>
-  <data name="GrandResetChatCommandPlugIn_Description" xml:space="preserve"><value>Exchanges 100 resets for one Grand Reset with permanent assignable points.</value></data>
+  <data name="GrandResetChatCommandPlugIn_Description" xml:space="preserve"><value>Exchanges the realm's required Resets for 100 Aether Prestige Points.</value></data>
   <data name="ResetConfiguration_GrandResetEnabled_Name" xml:space="preserve"><value>Enable Grand Reset</value></data>
 </root>
 

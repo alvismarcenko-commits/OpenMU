@@ -7,7 +7,6 @@ namespace MUnique.OpenMU.GameServer.MessageHandler;
 using System.Runtime.InteropServices;
 using MUnique.OpenMU.GameLogic;
 using MUnique.OpenMU.GameLogic.PlugIns.ChatCommands;
-using MUnique.OpenMU.GameLogic.Views;
 using MUnique.OpenMU.Network.Packets.ClientToServer;
 using MUnique.OpenMU.Network.PlugIns;
 using MUnique.OpenMU.PlugIns;
@@ -36,7 +35,6 @@ internal class ChatCommandListRequestHandlerPlugIn : ISubPacketHandlerPlugIn
             return;
         }
 
-        var commands = player.GetAvailableChatCommandInfos().ToList();
-        await player.InvokeViewPlugInAsync<IChatCommandListViewPlugIn>(p => p.ShowChatCommandListAsync(commands)).ConfigureAwait(false);
+        await AetherCommandCatalog.SendAsync(player).ConfigureAwait(false);
     }
 }
