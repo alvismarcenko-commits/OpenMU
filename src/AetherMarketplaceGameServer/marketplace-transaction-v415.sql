@@ -29,9 +29,21 @@ CREATE TABLE aether_marketplace.player_listing (
         )
     ),
     CONSTRAINT listing_realm_not_empty CHECK (length(trim(realm)) > 0),
-    CONSTRAINT listing_item_unique UNIQUE (item_instance_id)
+    -- Historical listings retain the item identity without global uniqueness.
 );
 
+-- Prevent concurrent listings of the same native item.
+-- A SOLD or CANCELLED listing remains in history but does not
+-- block a subsequent owner from listing the same item.
+-- DRAFT and RECONCILIATION_REQUIRED remain locked.
+CREATE UNIQUE INDEX player_listing_one_open_item
+ON aether_marketplace.player_listing(item_instance_id)
+WHERE status IN (
+    'DRAFT',
+    'ACTIVE',
+    'RESERVED',
+    'RECONCILIATION_REQUIRED'
+);
 CREATE TABLE aether_marketplace.purchase_reservation (
     purchase_id uuid PRIMARY KEY,
     listing_id uuid NOT NULL REFERENCES aether_marketplace.player_listing(listing_id),
