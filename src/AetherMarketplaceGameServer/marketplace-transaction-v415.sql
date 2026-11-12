@@ -28,7 +28,7 @@ CREATE TABLE aether_marketplace.player_listing (
             'RECONCILIATION_REQUIRED'
         )
     ),
-    CONSTRAINT listing_realm_not_empty CHECK (length(trim(realm)) > 0),
+    CONSTRAINT listing_realm_not_empty CHECK (length(trim(realm)) > 0)
     -- Historical listings retain the item identity without global uniqueness.
 );
 
