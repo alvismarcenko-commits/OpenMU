@@ -40,7 +40,7 @@ public sealed class PostgreSqlReservationTests
             ?? throw new InvalidOperationException("Disposable database password missing.");
         var connectionString = new NpgsqlConnectionStringBuilder
         {
-            Host = "127.0.0.1", Port = 55439, Database = Environment.GetEnvironmentVariable("AETHER_V414_TEST_DB_NAME") ?? "aether_marketplace_test", Username = "aether_test", Password = password, Pooling = false,
+            Host = "127.0.0.1", Port = int.TryParse(Environment.GetEnvironmentVariable("AETHER_MARKETPLACE_TEST_DB_PORT"), out var port) ? port : 55439, Database = Environment.GetEnvironmentVariable("AETHER_V414_TEST_DB_NAME") ?? "aether_marketplace_test", Username = "aether_test", Password = password, Pooling = false,
         }.ConnectionString;
         this._database = NpgsqlDataSource.Create(connectionString);
         ConnectionConfigurator.Initialize(new TestConnectionSettings(connectionString.Replace("Username=", "User Id=", StringComparison.OrdinalIgnoreCase)));
