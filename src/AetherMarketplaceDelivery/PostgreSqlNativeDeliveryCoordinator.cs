@@ -1,0 +1,101 @@
+// <copyright file="PostgreSqlNativeDeliveryCoordinator.cs" company="MUnique">
+// Licensed under the MIT License. See LICENSE file in the project root for full license information.
+// </copyright>
+
+namespace AetherMarketplaceDelivery;
+
+using AetherMarketplaceDelivery.PostgreSql;
+
+/// <summary>
+/// Coordinates a PostgreSQL-reserved native delivery.
+/// This is an integration candidate, not a production-ready OpenMU adapter.
+/// </summary>
+public sealed class PostgreSqlNativeDeliveryCoordinator(
+    PostgreSqlDeliveryJournal journal,
+    INativeInventoryDeliveryGateway native)
+{
+    /// <summary>
+    /// Registers, claims and attempts one native delivery.
+    /// </summary>
+    /// <param name="request">Immutable delivery request.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Native delivery status.</returns>
+    public async Task<NativeInventoryDeliveryStatus> DeliverAsync(
+        DeliveryRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (request.DeliveryId == Guid.Empty
+            || request.CharacterId == Guid.Empty
+            || request.AccountId <= 0
+            || string.IsNullOrWhiteSpace(request.Realm)
+            || !Guid.TryParse(request.ItemInstanceId, out var itemId) || itemId == Guid.Empty)
+        {
+            return NativeInventoryDeliveryStatus.InvalidTarget;
+        }
+
+        // Registration verifies immutable delivery identity.
+        await journal.RegisterAsync(request, cancellationToken)
+            .ConfigureAwait(false);
+
+        // Only one worker can claim a PENDING delivery.
+        if (!await journal.ClaimAsync(
+            request.DeliveryId, cancellationToken).ConfigureAwait(false))
+        {
+            return NativeInventoryDeliveryStatus.ReconciliationRequired;
+        }
+
+        NativeInventoryDeliveryResult result;
+
+        try
+        {
+            result = await native.DeliverAsync(
+                request, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            await journal.RequireReconciliationAsync(
+                request.DeliveryId, CancellationToken.None).ConfigureAwait(false);
+
+            return NativeInventoryDeliveryStatus.ReconciliationRequired;
+        }
+
+        if (result is null
+            || (result.Status == NativeInventoryDeliveryStatus.Delivered
+                && !NativeDeliveryIdentityGuard.IsConfirmed(request, result)))
+        {
+            await journal.RequireReconciliationAsync(
+                request.DeliveryId, CancellationToken.None).ConfigureAwait(false);
+
+            return NativeInventoryDeliveryStatus.ReconciliationRequired;
+        }
+
+        if (result.Status == NativeInventoryDeliveryStatus.Delivered)
+        {
+            if (!await journal.ConfirmDeliveredAsync(
+                request.DeliveryId, CancellationToken.None).ConfigureAwait(false))
+            {
+                return NativeInventoryDeliveryStatus.ReconciliationRequired;
+            }
+
+            return NativeInventoryDeliveryStatus.Delivered;
+        }
+
+        if (result.Status == NativeInventoryDeliveryStatus.InventoryFull)
+        {
+            if (!await journal.MarkInventoryFullAsync(
+                request.DeliveryId, CancellationToken.None).ConfigureAwait(false))
+            {
+                return NativeInventoryDeliveryStatus.ReconciliationRequired;
+            }
+
+            return NativeInventoryDeliveryStatus.InventoryFull;
+        }
+
+        await journal.RequireReconciliationAsync(
+            request.DeliveryId, CancellationToken.None).ConfigureAwait(false);
+
+        return NativeInventoryDeliveryStatus.ReconciliationRequired;
+    }
+}

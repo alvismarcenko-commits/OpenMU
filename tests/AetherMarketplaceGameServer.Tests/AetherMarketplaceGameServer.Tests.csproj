@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Using Include="NUnit.Framework" />
+    <ProjectReference Include="../../src/AetherMarketplaceGameServer/AetherMarketplaceGameServer.csproj" />
+    <ProjectReference Include="../../src/Persistence/InMemory/MUnique.OpenMU.Persistence.InMemory.csproj" />
+    <ProjectReference Include="../../src/Persistence/EntityFramework/MUnique.OpenMU.Persistence.EntityFramework.csproj" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Moq" />
+    <PackageReference Include="NUnit" />
+    <PackageReference Include="NUnit3TestAdapter" />
+    <Compile Include="../MUnique.OpenMU.Tests/PlayerTestHelper.cs" Link="PlayerTestHelper.cs" />
+    <Compile Include="../MUnique.OpenMU.Tests/MockViewPlugInContainer.cs" Link="MockViewPlugInContainer.cs" />
+    <None Include="../../src/AetherMarketplaceGameServer/native-item-reservation.sql" Link="native-item-reservation.sql" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

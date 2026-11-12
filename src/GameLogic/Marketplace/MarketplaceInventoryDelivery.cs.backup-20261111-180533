@@ -1,0 +1,140 @@
+namespace MUnique.OpenMU.GameLogic.Marketplace;
+
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using MUnique.OpenMU.GameLogic.Administration;
+using MUnique.OpenMU.GameLogic.Views.Inventory;
+using MUnique.OpenMU.Interfaces;
+
+/// <summary>
+/// Result of a native Marketplace inventory operation.
+/// </summary>
+public enum MarketplaceNativeStatus
+{
+    Delivered,
+    InventoryFull,
+    InvalidItem,
+    InvalidCharacter,
+    SaveUncertain,
+}
+
+/// <summary>
+/// Inserts a server-approved item into a live player's inventory.
+/// Does not authorize purchases, debit currency or provide
+/// cross-database exactly-once delivery guarantees.
+/// </summary>
+public static class MarketplaceInventoryDelivery
+{
+    /// <summary>
+    /// Delivers a validated item to a live character.
+    /// The caller must have authenticated the account,
+    /// realm and immutable Marketplace item specification.
+    /// </summary>
+    public static async ValueTask<MarketplaceNativeStatus> DeliverAsync(
+        Player player,
+        Guid expectedCharacterId,
+        ItemSpecification specification,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(player);
+        ArgumentNullException.ThrowIfNull(specification);
+
+        return await player.RunPersistenceExclusiveAsync(
+            async () =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (!player.IsConnected
+                    || player.PlayerState.CurrentState != PlayerState.EnteredWorld
+                    || player.SelectedCharacter is not { } character
+                    || character.Id != expectedCharacterId
+                    || player.Account is null
+                    || player.IsTemplatePlayer)
+                {
+                    return MarketplaceNativeStatus.InvalidCharacter;
+                }
+
+                if (player.Inventory is not { } inventory)
+                {
+                    return MarketplaceNativeStatus.InvalidCharacter;
+                }
+
+                var definition = player.GameContext.Configuration.Items
+                    .SingleOrDefault(d =>
+                        d.Group == specification.Group
+                        && d.Number == specification.Number);
+
+                if (definition is null
+                    || !GameMasterItemFactory.IsValid(
+                        definition, specification))
+                {
+                    return MarketplaceNativeStatus.InvalidItem;
+                }
+
+                var temporary = GameMasterItemFactory.CreateItem(
+                    definition, specification);
+
+                if (inventory.CheckInvSpace(temporary) is not { } slot)
+                {
+                    return MarketplaceNativeStatus.InventoryFull;
+                }
+
+                var item = temporary.MakePersistent(
+                    player.PersistenceContext);
+
+                bool inserted;
+
+                try
+                {
+                    inserted = await inventory.AddItemAsync(
+                        slot, item).ConfigureAwait(false);
+                }
+                catch
+                {
+                    // The persistence state may have changed.
+                    // Do not blindly retry the same delivery.
+                    return MarketplaceNativeStatus.SaveUncertain;
+                }
+
+                if (!inserted)
+                {
+                    player.PersistenceContext.Detach(item);
+                    return MarketplaceNativeStatus.InventoryFull;
+                }
+
+                try
+                {
+                    var saved = await player.SaveProgressAsync(
+                        cancellationToken).ConfigureAwait(false);
+
+                    if (!saved)
+                    {
+                        return MarketplaceNativeStatus.SaveUncertain;
+                    }
+                }
+                catch
+                {
+                    // The item may have reached persistent storage.
+                    // Reconciliation is required before retrying.
+                    return MarketplaceNativeStatus.SaveUncertain;
+                }
+
+                try
+                {
+                    await player.InvokeViewPlugInAsync<IItemAppearPlugIn>(
+                        p => p.ItemAppearAsync(item))
+                        .ConfigureAwait(false);
+                }
+                catch
+                {
+                    // The item was saved successfully.
+                    // Client notification failure must not
+                    // trigger another item delivery.
+                }
+
+                return MarketplaceNativeStatus.Delivered;
+            },
+            cancellationToken).ConfigureAwait(false);
+    }
+}

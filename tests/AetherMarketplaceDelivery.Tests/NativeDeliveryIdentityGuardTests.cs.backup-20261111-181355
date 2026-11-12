@@ -1,0 +1,105 @@
+// <copyright file="NativeDeliveryIdentityGuardTests.cs" company="MUnique">
+// Licensed under the MIT License. See LICENSE file in the project root for full license information.
+// </copyright>
+
+namespace AetherMarketplaceDelivery.Tests;
+
+using System;
+using AetherMarketplaceDelivery;
+using Xunit;
+
+/// <summary>
+/// Tests native delivery identity validation.
+/// </summary>
+public sealed class NativeDeliveryIdentityGuardTests
+{
+    /// <summary>
+    /// Matching IDs are accepted.
+    /// </summary>
+    [Fact]
+    public void MatchingIdsAreAccepted()
+    {
+        var id = Guid.NewGuid();
+        var request = CreateRequest(id.ToString("D"));
+
+        var result = new NativeInventoryDeliveryResult(
+            NativeInventoryDeliveryStatus.Delivered,
+            id.ToString("D"));
+
+        Assert.True(NativeDeliveryIdentityGuard.IsConfirmed(request, result));
+    }
+
+    /// <summary>
+    /// Different IDs are rejected.
+    /// </summary>
+    [Fact]
+    public void DifferentIdsAreRejected()
+    {
+        var request = CreateRequest(Guid.NewGuid().ToString("D"));
+
+        var result = new NativeInventoryDeliveryResult(
+            NativeInventoryDeliveryStatus.Delivered,
+            Guid.NewGuid().ToString("D"));
+
+        Assert.False(NativeDeliveryIdentityGuard.IsConfirmed(request, result));
+    }
+
+    /// <summary>
+    /// Uncertain delivery is rejected.
+    /// </summary>
+    [Fact]
+    public void UncertainDeliveryIsRejected()
+    {
+        var id = Guid.NewGuid();
+        var request = CreateRequest(id.ToString("D"));
+
+        var result = new NativeInventoryDeliveryResult(
+            NativeInventoryDeliveryStatus.ReconciliationRequired,
+            id.ToString("D"));
+
+        Assert.False(NativeDeliveryIdentityGuard.IsConfirmed(request, result));
+    }
+
+    /// <summary>
+    /// Full inventory is rejected.
+    /// </summary>
+    [Fact]
+    public void FullInventoryIsRejected()
+    {
+        var request = CreateRequest(Guid.NewGuid().ToString("D"));
+
+        var result = new NativeInventoryDeliveryResult(
+            NativeInventoryDeliveryStatus.InventoryFull,
+            null);
+
+        Assert.False(NativeDeliveryIdentityGuard.IsConfirmed(request, result));
+    }
+
+    /// <summary>
+    /// Invalid IDs are rejected.
+    /// </summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData("invalid")]
+    [InlineData("00000000-0000-0000-0000-000000000000")]
+    public void InvalidIdsAreRejected(string value)
+    {
+        var request = CreateRequest(value);
+
+        var result = new NativeInventoryDeliveryResult(
+            NativeInventoryDeliveryStatus.Delivered,
+            Guid.NewGuid().ToString("D"));
+
+        Assert.False(NativeDeliveryIdentityGuard.IsConfirmed(request, result));
+    }
+
+    private static DeliveryRequest CreateRequest(string itemId)
+    {
+        return new DeliveryRequest(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            1001,
+            "Ascension",
+            itemId);
+    }
+}

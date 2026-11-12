@@ -1,0 +1,65 @@
+// <copyright file="PostgreSqlTransactionReservationCoordinator.cs" company="MUnique">
+// Licensed under the MIT License. See LICENSE file in the project root for full license information.
+// </copyright>
+
+namespace AetherMarketplaceDelivery;
+
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Npgsql;
+using NpgsqlTypes;
+
+/// <summary>
+/// Coordinates durable PostgreSQL purchase reservations.
+/// Does not debit currency, credit sellers, or deliver inventory.
+/// </summary>
+public sealed class PostgreSqlTransactionReservationCoordinator
+{
+    private readonly NpgsqlDataSource dataSource;
+
+    /// <summary>Initializes a new instance of the <see cref="PostgreSqlTransactionReservationCoordinator"/> class.</summary>
+    /// <param name="dataSource">Server-owned PostgreSQL data source.</param>
+    public PostgreSqlTransactionReservationCoordinator(NpgsqlDataSource dataSource)
+    {
+        this.dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
+    }
+
+    /// <summary>Attempts to reserve one listing for a buyer.</summary>
+    /// <param name="request">Server-authorized purchase request.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The durable reservation outcome.</returns>
+    public async ValueTask<PurchaseReservationResult> ReservePurchaseAsync(
+        PlayerPurchaseRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (request is null
+            || request.PurchaseId == Guid.Empty
+            || request.ListingId == Guid.Empty
+            || request.BuyerCharacterId == Guid.Empty)
+        {
+            return PurchaseReservationResult.InvalidRequest;
+        }
+
+        await using var command = this.dataSource.CreateCommand(
+            "SELECT aether_marketplace.reserve_purchase(@purchase_id, @listing_id, @buyer_id)");
+
+        command.Parameters.AddWithValue("purchase_id", NpgsqlDbType.Uuid, request.PurchaseId);
+        command.Parameters.AddWithValue("listing_id", NpgsqlDbType.Uuid, request.ListingId);
+        command.Parameters.AddWithValue("buyer_id", NpgsqlDbType.Uuid, request.BuyerCharacterId);
+
+        var value = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+
+        return (value as string) switch
+        {
+            "RESERVED" => PurchaseReservationResult.Reserved,
+            "ALREADY_RESERVED" => PurchaseReservationResult.AlreadyReserved,
+            "PURCHASE_ID_CONFLICT" => PurchaseReservationResult.PurchaseIdConflict,
+            "LISTING_NOT_FOUND" => PurchaseReservationResult.ListingNotFound,
+            "LISTING_NOT_ACTIVE" => PurchaseReservationResult.ListingNotActive,
+            "SELF_PURCHASE_DENIED" => PurchaseReservationResult.SelfPurchaseDenied,
+            "INVALID_REQUEST" => PurchaseReservationResult.InvalidRequest,
+            _ => PurchaseReservationResult.ReconciliationRequired,
+        };
+    }
+}
