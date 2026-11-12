@@ -34,7 +34,7 @@ public sealed class TransactionReservationIntegrationTests
         var builder = new NpgsqlConnectionStringBuilder
         {
             Host = "127.0.0.1",
-            Port = 55439,
+            Port = int.TryParse(Environment.GetEnvironmentVariable("AETHER_MARKETPLACE_TEST_DB_PORT"), out var port) ? port : 55439,
             Database = database,
             Username = "aether_test",
             Password = password,
