@@ -1,4 +1,4 @@
-﻿// <copyright file="PlayerContext.cs" company="MUnique">
+// <copyright file="PlayerContext.cs" company="MUnique">
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 // </copyright>
 
@@ -24,6 +24,50 @@ internal class PlayerContext : CachingEntityFrameworkContext, IPlayerContext
     public PlayerContext(DbContext context, IContextAwareRepositoryProvider repositoryProvider, ILogger<PlayerContext> logger)
         : base(context, repositoryProvider, null, logger)
     {
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<DataModel.Entities.ItemStorage?> LoadCustodyStorageAsync(Guid storageId, CancellationToken cancellationToken = default)
+    {
+        var storage = await this.GetByIdAsync<DataModel.Entities.ItemStorage>(storageId, cancellationToken).ConfigureAwait(false);
+        if (storage is not null)
+        {
+            using var l = await this.LockAsync(cancellationToken).ConfigureAwait(false);
+            var collection = this.Context.Entry(storage).Collection("RawItems");
+            collection.IsLoaded = false;
+            await collection.LoadAsync(cancellationToken).ConfigureAwait(false);
+            var configuration = (this.Context as EntityDataContext)?.CurrentGameConfiguration
+                ?? throw new InvalidOperationException("Native configuration is not loaded.");
+            foreach (var item in storage.Items.Cast<Item>())
+            {
+                item.Definition = configuration.Items.Single(d => d is IIdentifiable id && id.Id == item.DefinitionId);
+                await this.Context.Entry(item).Collection("RawItemOptions").LoadAsync(cancellationToken).ConfigureAwait(false);
+                foreach (var option in item.RawItemOptions)
+                {
+                    option.ItemOption = configuration.ItemOptions.SelectMany(d => d.PossibleOptions)
+                        .Concat(item.Definition.PossibleItemOptions.SelectMany(d => d.PossibleOptions))
+                        .First(d => d is IIdentifiable id && id.Id == option.ItemOptionId);
+                }
+
+                await this.Context.Entry(item).Collection("JoinedItemSetGroups").LoadAsync(cancellationToken).ConfigureAwait(false);
+                foreach (var link in item.JoinedItemSetGroups)
+                {
+                    link.ItemOfItemSet = configuration.ItemSetGroups.SelectMany(g => g.Items)
+                        .OfType<ItemOfItemSet>().Single(s => s.Id == link.ItemOfItemSetId);
+                }
+            }
+        }
+
+        return storage;
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<bool> VerifyMarketplaceDeliveryStoreAsync(Guid storeId, CancellationToken cancellationToken = default)
+    {
+        using var l = await this.LockAsync(cancellationToken).ConfigureAwait(false);
+        return storeId != Guid.Empty && await this.Context.Database.SqlQueryRaw<Guid>(
+            "SELECT store_id AS \"Value\" FROM aether_marketplace.native_delivery_store WHERE singleton")
+            .SingleAsync(cancellationToken).ConfigureAwait(false) == storeId;
     }
 
     /// <inheritdoc/>

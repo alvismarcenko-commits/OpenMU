@@ -75,3 +75,74 @@ isolated run does not connect to the pre-existing service on port 55432.
 
 No main/master changes, merges, deployment, production database changes or
 production server startup are part of this integration.
+
+## V5.10.29 original-entity custody candidate
+
+`GameServerNativeCustody.ListAsync` validates a live seller and independently stored
+account/Realm binding. A durable DRAFT/ACQUIRING intent fences the original item;
+the native inventory save moves that same entity into configured realm custody.
+Only that committed ownership transition exposes the listing as ACTIVE/HELD.
+Interrupted acquisition can be resumed with the same listing id by the recovery hook.
+
+After V5.10.28 AC settlement, `GameServerCustodyDelivery` implements the existing
+`ISafeDeliveryJournal` and recoverable `ISafeNativeDelivery` contracts. The safe
+coordinator permits retry only for this explicitly recoverable adapter; legacy
+adapters retain their conservative behavior. Purchase id is the delivery id.
+Database advisory transaction locks fence workers. Offline/full-inventory cases
+leave a PENDING receipt and the original entity in custody.
+
+`MarketplaceInventoryDelivery.TransferExistingItemAsync` loads the original
+escrowed entity through the native player context, preserves its persistent
+option/set links, finds a real inventory slot and saves native progress. A native
+database ownership trigger rechecks the paid purchase, accounting proof, custody,
+listing, actual character/account and destination. It commits ownership,
+COMPLETED receipt/purchase, DELIVERED custody and SOLD listing in the SAME native
+save transaction. Application acknowledgements cannot create completion. A lost
+acknowledgement is recovered from that committed receipt, without moving again.
+An uncertain save disposes the affected player session/context without retrying
+its dirty change tracker; a new session reconciles the durable state.
+
+This candidate explicitly requires Marketplace state and native data in the same
+PostgreSQL database. A per-store UUID is checked through both independent data
+access paths before mutation. Different stores and unsupported persistence
+providers fail closed. This is not a distributed transaction implementation and
+must not be enabled for split-database deployment.
+
+The new `NativeDeliveryRecoveryPlugIn` uses OpenMU's periodic-task plugin hook,
+which also resumes deliveries after reconnect and after space becomes available.
+It is disabled by default. Startup and Dapr GameServer hosts reference/load the
+adapter assembly for normal plugin discovery. Configure explicit `Realms`
+(server-id to realm key) and `ConnectionVariables` (realm key to environment
+variable name). Do not infer Realm from EXP rates, character names or server ids.
+Origin, Legacy, Evolution and Ascension may each use their own configured source.
+No connection strings or enabled configurations are shipped.
+
+Migration dependencies through V5.10.28 must exist first. The isolated runner
+lists the precise order, then installs `marketplace-native-ownership-fix3.sql`,
+`marketplace-native-delivery-v51029-staging.sql`, and the separate
+`marketplace-native-delivery-permissions-v29-staging.sql`. Configure
+`native_realm_custody` with a dedicated native ItemStorage before listing.
+The old `transfer_reserved_native_item` gate is unchanged; this candidate does
+not enable that unsafe legacy entry point or snapshot-based recreation.
+
+The restricted `aether_v29_runtime` role receives read access and EXECUTE on
+validated entry points, never direct table mutations or wallet settlement.
+SECURITY DEFINER functions use a fixed search_path and a non-login owner.
+The native ORM login must additionally have USAGE on aether_marketplace and
+SELECT on native_delivery_store; it requires no receipt/status mutation grants.
+Role installation and production activation require separate review. Existing
+legacy settlement permissions are outside this staging role script.
+
+Windows 11 development verification (.NET 10 SDK and Docker Desktop):
+
+```powershell
+.\tests\AetherMarketplaceGameServer.Tests\Run-NativeCustodyTests.ps1 -IncludeRegression
+```
+
+This starts its own PostgreSQL 17 container on a random loopback port, builds
+Release, runs actual OpenMU persistence/custody tests, and uses a second disposable
+database for affected native/delivery regressions. It restores environment values
+and removes only its own container. `-NoBuild` is valid only for unchanged source
+already built in Release. A fresh-context/recreated-service recovery test is not
+proof of recovery after an OS-level GameServer kill; practical client and process
+termination tests remain separate acceptance checks.

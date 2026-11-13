@@ -17,5 +17,6 @@
     <Compile Include="../MUnique.OpenMU.Tests/PlayerTestHelper.cs" Link="PlayerTestHelper.cs" />
     <Compile Include="../MUnique.OpenMU.Tests/MockViewPlugInContainer.cs" Link="MockViewPlugInContainer.cs" />
     <None Include="../../src/AetherMarketplaceGameServer/native-item-reservation.sql" Link="native-item-reservation.sql" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../src/AetherMarketplaceGameServer/marketplace-*.sql" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

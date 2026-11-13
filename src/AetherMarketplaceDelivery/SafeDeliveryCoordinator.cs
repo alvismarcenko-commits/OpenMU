@@ -56,17 +56,17 @@ public sealed class SafeDeliveryCoordinator(
                     return SafeDeliveryStatus.Rejected;
                 }
 
-                return existing.Status switch
+                if (existing.Status is SafeDeliveryStatus.Delivered or SafeDeliveryStatus.AlreadyDelivered)
                 {
-                    SafeDeliveryStatus.Delivered =>
-                        SafeDeliveryStatus.AlreadyDelivered,
-                    SafeDeliveryStatus.AlreadyDelivered =>
-                        SafeDeliveryStatus.AlreadyDelivered,
-                    _ => SafeDeliveryStatus.ReconciliationRequired,
-                };
-            }
+                    return SafeDeliveryStatus.AlreadyDelivered;
+                }
 
-            if (!await journal.TryReserveAsync(
+                if (native is not IRecoverableSafeNativeDelivery)
+                {
+                    return SafeDeliveryStatus.ReconciliationRequired;
+                }
+            }
+            else if (!await journal.TryReserveAsync(
                 deliveryId,
                 characterId,
                 itemInstanceId,
