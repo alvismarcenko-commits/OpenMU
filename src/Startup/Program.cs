@@ -1,4 +1,4 @@
-﻿// <copyright file="Program.cs" company="MUnique">
+// <copyright file="Program.cs" company="MUnique">
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 // </copyright>
 
@@ -389,6 +389,7 @@ internal sealed class Program : IDisposable
             builder.Services.AddAdminMcp(builder.Configuration);
         }
 
+        _ = typeof(AetherMarketplaceGameServer.NativeDeliveryRecoveryPlugIn).Assembly.GetName();
         builder.Services.AddSingleton(this._servers)
             .AddSingleton<IConfigurationChangePublisher, ConfigurationChangeHandler>()
             .AddSingleton<IConfigurationChangeListener, ConfigurationChangeListener>()

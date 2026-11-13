@@ -32,6 +32,91 @@ public sealed record MarketplaceDeliveryResult(
     string? ItemInstanceId);
 public static class MarketplaceInventoryDelivery
 {
+    /// <summary>Moves an existing escrow entity without rebuilding its metadata.</summary>
+    /// <param name="player">The authenticated buyer.</param>
+    /// <param name="expectedCharacterId">The authorized buyer character.</param>
+    /// <param name="escrowStorageId">The trusted custody storage.</param>
+    /// <param name="itemId">The original persistent item identity.</param>
+    /// <param name="expectedAccountId">The independently authorized native account.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The native save outcome, which still requires independent durable verification.</returns>
+    /// <remarks>The caller must hold a durable worker fence and install the custody ownership guard
+    /// in the native persistence database. An uncertain save requires a fresh player context before retry.</remarks>
+    public static async ValueTask<MarketplaceDeliveryResult> TransferExistingItemAsync(
+        Player player,
+        Guid expectedCharacterId,
+        Guid escrowStorageId,
+        Guid itemId,
+        Guid expectedAccountId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(player);
+        return await player.RunPersistenceExclusiveAsync(
+            async () =>
+        {
+            if (!player.IsConnected || player.IsTemplatePlayer
+                || player.PlayerState.CurrentState != PlayerState.EnteredWorld
+                || player.SelectedCharacter?.Id != expectedCharacterId
+                || player.Account is not MUnique.OpenMU.Persistence.IIdentifiable account || account.Id != expectedAccountId
+                || expectedAccountId == Guid.Empty || player.Inventory is not { } inventory
+                || itemId == Guid.Empty || escrowStorageId == Guid.Empty)
+            {
+                return new MarketplaceDeliveryResult(MarketplaceNativeStatus.InvalidCharacter, null);
+            }
+
+            var escrow = await player.PersistenceContext.LoadCustodyStorageAsync(escrowStorageId, cancellationToken).ConfigureAwait(false);
+
+            // Loading storage alone does not hydrate its item collection in a fresh
+            // player context. Load the persistent aggregate before checking custody.
+            await player.PersistenceContext.GetByIdAsync<Item>(itemId, cancellationToken).ConfigureAwait(false);
+            var item = escrow?.Items.SingleOrDefault(i => ((MUnique.OpenMU.Persistence.IIdentifiable)i).Id == itemId);
+            if (escrow is null || item?.Definition is null)
+            {
+                return new MarketplaceDeliveryResult(MarketplaceNativeStatus.InvalidItem, null);
+            }
+
+            if (inventory.CheckInvSpace(item) is not { } slot)
+            {
+                return new MarketplaceDeliveryResult(MarketplaceNativeStatus.InventoryFull, null);
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!player.IsConnected || player.SelectedCharacter?.Id != expectedCharacterId
+                || player.Account is not MUnique.OpenMU.Persistence.IIdentifiable currentAccount || currentAccount.Id != expectedAccountId)
+            {
+                return new MarketplaceDeliveryResult(MarketplaceNativeStatus.InvalidCharacter, null);
+            }
+
+            // Preserve the same tracked entity, option links, sets and durability.
+            // Never create, clone, detach or delete an item to implement this move.
+            try
+            {
+                escrow.Items.Remove(item);
+                if (!await inventory.AddItemAsync(slot, item).ConfigureAwait(false)
+                    || !await player.SaveProgressAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    return new MarketplaceDeliveryResult(MarketplaceNativeStatus.SaveUncertain, null);
+                }
+            }
+            catch
+            {
+                return new MarketplaceDeliveryResult(MarketplaceNativeStatus.SaveUncertain, null);
+            }
+
+            try
+            {
+                await player.InvokeViewPlugInAsync<IItemAppearPlugIn>(p => p.ItemAppearAsync(item)).ConfigureAwait(false);
+            }
+            catch
+            {
+                // Ownership is already committed; notification failure cannot undo it.
+            }
+
+            return new MarketplaceDeliveryResult(MarketplaceNativeStatus.Delivered, itemId.ToString("D"));
+        },
+            cancellationToken).ConfigureAwait(false);
+    }
+
     /// <summary>
     /// Delivers a validated item to a live character.
     /// The caller must have authenticated the account,

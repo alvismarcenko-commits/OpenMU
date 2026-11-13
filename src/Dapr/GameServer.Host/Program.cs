@@ -1,4 +1,4 @@
-﻿// <copyright file="Program.cs" company="MUnique">
+// <copyright file="Program.cs" company="MUnique">
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 // </copyright>
 
@@ -21,6 +21,7 @@ using GameServer = MUnique.OpenMU.GameServer.GameServer;
 // Ensure GameLogic and GameServer Assemblies are loaded
 _ = MUnique.OpenMU.GameLogic.Rand.NextInt(1, 2);
 _ = MUnique.OpenMU.GameServer.ClientVersionResolver.DefaultVersion;
+_ = typeof(AetherMarketplaceGameServer.NativeDeliveryRecoveryPlugIn).Assembly.GetName();
 
 var gameServerId = GameServerIdResolver.Determine();
 var serviceName = $"GameServer{gameServerId}";

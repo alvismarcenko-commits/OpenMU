@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <data name="RecoveryName" xml:space="preserve"><value>Marketplace native delivery recovery</value></data>
+  <data name="RecoveryDescription" xml:space="preserve"><value>Resumes verified paid deliveries for online buyers using original escrowed items.</value></data>
+</root>

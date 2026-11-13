@@ -14,6 +14,20 @@ using MUnique.OpenMU.Interfaces;
 /// </summary>
 public interface IPlayerContext : IContext
 {
+    /// <summary>Loads an external custody storage and its original item aggregates into this player context.</summary>
+    /// <param name="storageId">The trusted storage identity.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The storage, if it exists.</returns>
+    async ValueTask<ItemStorage?> LoadCustodyStorageAsync(Guid storageId, CancellationToken cancellationToken = default)
+        => await this.GetByIdAsync<ItemStorage>(storageId, cancellationToken).ConfigureAwait(false);
+
+    /// <summary>Checks that native ownership and Marketplace receipts share the same verified store.</summary>
+    /// <param name="storeId">The independently read delivery store identity.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>Whether atomic ownership receipts are supported in this native store.</returns>
+    ValueTask<bool> VerifyMarketplaceDeliveryStoreAsync(Guid storeId, CancellationToken cancellationToken = default)
+        => ValueTask.FromResult(false);
+
     /// <summary>
     /// Gets the letter body by the id of its header.
     /// </summary>
