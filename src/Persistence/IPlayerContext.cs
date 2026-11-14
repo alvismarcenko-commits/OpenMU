@@ -14,6 +14,13 @@ using MUnique.OpenMU.Interfaces;
 /// </summary>
 public interface IPlayerContext : IContext
 {
+    /// <summary>Reloads a native balance after a trusted external settlement, including its concurrency baseline.</summary>
+    /// <param name="storage">The player's inventory storage.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The persisted balance.</returns>
+    ValueTask<int> ReloadInventoryMoneyAsync(ItemStorage storage, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("External Zen settlement is not supported by this persistence provider.");
+
     /// <summary>Loads an external custody storage and its original item aggregates into this player context.</summary>
     /// <param name="storageId">The trusted storage identity.</param>
     /// <param name="cancellationToken">The cancellation token.</param>

@@ -52,6 +52,9 @@ internal sealed class PlayerPersistence
         this._player = player;
     }
 
+    /// <summary>Gets whether this asynchronous flow already owns the player's persistence lock.</summary>
+    public bool IsLockHeld => this._lockHeld.Value;
+
     /// <summary>
     /// Saves the progress of the player.
     /// </summary>

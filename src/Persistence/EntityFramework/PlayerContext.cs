@@ -27,6 +27,21 @@ internal class PlayerContext : CachingEntityFrameworkContext, IPlayerContext
     }
 
     /// <inheritdoc />
+    public async ValueTask<int> ReloadInventoryMoneyAsync(DataModel.Entities.ItemStorage storage, CancellationToken cancellationToken = default)
+    {
+        using var l = await this.LockAsync(cancellationToken).ConfigureAwait(false);
+        var entry = this.Context.Entry(storage);
+        var values = await entry.GetDatabaseValuesAsync(cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidOperationException("Native inventory no longer exists.");
+        var property = entry.Property(nameof(ItemStorage.Money));
+        var balance = values.GetValue<int>(nameof(ItemStorage.Money));
+        property.CurrentValue = balance;
+        property.OriginalValue = balance;
+        property.IsModified = false;
+        return balance;
+    }
+
+    /// <inheritdoc />
     public async ValueTask<DataModel.Entities.ItemStorage?> LoadCustodyStorageAsync(Guid storageId, CancellationToken cancellationToken = default)
     {
         var storage = await this.GetByIdAsync<DataModel.Entities.ItemStorage>(storageId, cancellationToken).ConfigureAwait(false);

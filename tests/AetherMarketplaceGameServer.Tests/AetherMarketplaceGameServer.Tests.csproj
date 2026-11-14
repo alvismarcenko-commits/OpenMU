@@ -6,6 +6,8 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../../src/AetherMarketplaceGateway/AetherMarketplaceGateway.csproj" />
+    <ProjectReference Include="../../src/GameServer/MUnique.OpenMU.GameServer.csproj" />
     <Using Include="NUnit.Framework" />
     <ProjectReference Include="../../src/AetherMarketplaceGameServer/AetherMarketplaceGameServer.csproj" />
     <ProjectReference Include="../../src/Persistence/InMemory/MUnique.OpenMU.Persistence.InMemory.csproj" />

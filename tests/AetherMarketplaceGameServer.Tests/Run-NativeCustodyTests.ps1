@@ -1,4 +1,4 @@
-param([switch]$IncludeRegression, [switch]$NoBuild)
+param([switch]$IncludeRegression, [switch]$NoBuild, [string]$Filter='FullyQualifiedName~OriginalCustodyEntityAndReceiptSurviveFreshContextAsync')
 $ErrorActionPreference='Stop'
 $name='aether-v29-'+[Guid]::NewGuid().ToString('N').Substring(0,12)
 $names=@('AETHER_V414_DISPOSABLE_DB','AETHER_MARKETPLACE_TEST_DB_PASSWORD','AETHER_MARKETPLACE_TEST_DB_PORT','AETHER_V414_TEST_DB_NAME','AETHER_V415_TRANSACTION_TEST','AETHER_V415_TEST_DB_NAME')
@@ -22,7 +22,7 @@ try {
         dotnet build "$PSScriptRoot/AetherMarketplaceGameServer.Tests.csproj" -c Release -p:ci=true -m:1 -nr:false -p:UseSharedCompilation=false --nologo -v minimal
         if($LASTEXITCODE -ne 0){throw 'Build failed'}
     }
-    dotnet test "$PSScriptRoot/AetherMarketplaceGameServer.Tests.csproj" -c Release --no-build --nologo --filter 'FullyQualifiedName~OriginalCustodyEntityAndReceiptSurviveFreshContextAsync' --logger 'trx;LogFileName=v29-native.trx'
+    dotnet test "$PSScriptRoot/AetherMarketplaceGameServer.Tests.csproj" -c Release --no-build --nologo --filter $Filter --logger 'trx;LogFileName=v29-native.trx'
     if($LASTEXITCODE -ne 0){throw 'Native integration failed'}
     if($IncludeRegression) {
         docker exec $name createdb -U aether_test aether_marketplace_test

@@ -1,4 +1,4 @@
-﻿// <copyright file="Player.cs" company="MUnique">
+// <copyright file="Player.cs" company="MUnique">
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 // </copyright>
 
@@ -255,6 +255,9 @@ public class Player : AsyncDisposable, IBucketMapObserver, IAttackable, IAttacke
     /// Gets the persistence context.
     /// </summary>
     public IPlayerContext PersistenceContext { get; }
+
+    /// <summary>Gets whether the current asynchronous flow owns this player's persistence lock.</summary>
+    public bool IsPersistenceLockHeld => this._persistence.IsLockHeld;
 
     /// <inheritdoc/>
     public ushort Id { get; set; }
