@@ -17,6 +17,7 @@ public class JsonObjectDeserializer : MUnique.OpenMU.Persistence.Json.JsonObject
     protected override void BeforeDeserialize(JsonSerializerOptions options)
     {
         base.BeforeDeserialize(options);
+        options.Converters.Add(new BinaryAsHexJsonConverter());
         options.Converters.Add(new IntervalAsTimeSpanJsonConverter());
         foreach (var converter in JsonConverterRegistry.Converters)
         {

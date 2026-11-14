@@ -41,6 +41,7 @@ namespace MUnique.OpenMU.Persistence.EntityFramework.CompiledModels.ForAccountCo
                 typeof(int),
                 propertyInfo: typeof(MUnique.OpenMU.DataModel.Entities.ItemStorage).GetProperty("Money", BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly),
                 fieldInfo: typeof(MUnique.OpenMU.DataModel.Entities.ItemStorage).GetField("<Money>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly),
+                concurrencyToken: true,
                 sentinel: 0);
             money.AddAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.None);
 

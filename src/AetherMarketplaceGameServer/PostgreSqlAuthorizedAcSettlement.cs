@@ -14,15 +14,26 @@ public sealed class PostgreSqlAuthorizedAcSettlement
 {
     private readonly NpgsqlDataSource _dataSource;
     private readonly string _realm;
+    private readonly bool _restrictedEntry;
 
     /// <summary>Initializes a new instance of the <see cref="PostgreSqlAuthorizedAcSettlement"/> class.</summary>
     /// <param name="dataSource">The trusted settlement service data source.</param>
     /// <param name="realm">The server-configured realm.</param>
     public PostgreSqlAuthorizedAcSettlement(NpgsqlDataSource dataSource, string realm)
+        : this(dataSource, realm, false)
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="PostgreSqlAuthorizedAcSettlement"/> class for a restricted server role.</summary>
+    /// <param name="dataSource">The trusted data source.</param>
+    /// <param name="realm">The configured realm.</param>
+    /// <param name="restrictedEntry">Whether to delegate through the protected V5.10.30 entry point.</param>
+    public PostgreSqlAuthorizedAcSettlement(NpgsqlDataSource dataSource, string realm, bool restrictedEntry)
     {
         this._dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
         ArgumentException.ThrowIfNullOrWhiteSpace(realm);
         this._realm = realm;
+        this._restrictedEntry = restrictedEntry;
     }
 
     /// <summary>Authorizes and settles a purchase without accepting client identity or payment proof.</summary>
@@ -50,10 +61,11 @@ public sealed class PostgreSqlAuthorizedAcSettlement
                     return "UNAUTHORIZED";
                 }
 
-                await using var command = this._dataSource.CreateCommand("""
+                var sql = this._restrictedEntry ? "SELECT aether_marketplace.settle_authorized_ac_entry_v30(@purchase,@realm,@character,@account)" : """
                     SELECT aether_marketplace.settle_authorized_ac_purchase_v4(
                         @purchase, @realm, @character, @account)
-                    """);
+                    """;
+                await using var command = this._dataSource.CreateCommand(sql);
                 command.Parameters.AddWithValue("purchase", purchaseId);
                 command.Parameters.AddWithValue("realm", this._realm);
                 command.Parameters.AddWithValue("character", character.Id);

@@ -5,6 +5,7 @@
 namespace AetherMarketplaceGameServer.Tests;
 
 using System.Text.Json;
+using System.Net.Http.Json;
 using System.Threading;
 using AetherMarketplaceDelivery;
 using AetherMarketplaceDelivery.PostgreSql;
@@ -23,7 +24,7 @@ using Configuration = MUnique.OpenMU.DataModel.Configuration;
 
 [TestFixture]
 [NonParallelizable]
-public sealed class NativeCustodyDeliveryTests
+public sealed partial class NativeCustodyDeliveryTests
 {
     private NpgsqlDataSource _database = null!;
 
@@ -73,12 +74,35 @@ public sealed class NativeCustodyDeliveryTests
     [TestCase("lost-ack")]
     [TestCase("acquire-retry")]
     [TestCase("disconnect-during")]
+    [TestCase("zen-normal")]
+    [TestCase("zen-full")]
+    [TestCase("zen-offline")]
+    [TestCase("zen-insufficient")]
+    [TestCase("zen-overflow")]
+    [TestCase("zen-concurrent")]
+    [TestCase("zen-save-failure")]
+    [TestCase("zen-rollback")]
+    [TestCase("zen-stale-session")]
+    [TestCase("zen-pre-save-failure")]
+    [TestCase("cancel")]
+    [TestCase("cancel-full")]
+    [TestCase("api-ac")]
+    [TestCase("api-zen")]
+    [TestCase("api-cancel")]
     public async Task OriginalCustodyEntityAndReceiptSurviveFreshContextAsync(string scenario)
     {
+        var api = scenario.StartsWith("api-", StringComparison.Ordinal) || scenario == "process-crash";
+        if (scenario == "process-crash" && Environment.GetEnvironmentVariable("AETHER_V30_PROCESS_PROBE") != "1")
+        {
+            throw new InvalidOperationException("Process probe requires its isolated runner.");
+        }
+        var zen = scenario.StartsWith("zen-", StringComparison.Ordinal) || scenario is "api-zen" or "api-browser";
+        if (zen && !api) { scenario = scenario[4..]; }
         var provider = new PersistenceContextProvider(NullLoggerFactory.Instance, null);
         using var configurationContext = provider.CreateNewContext();
         var configuration = configurationContext.CreateNew<Configuration.GameConfiguration>();
         configuration.RecoveryInterval = int.MaxValue;
+        configuration.MaximumInventoryMoney = 1_000_000;
         var map = configurationContext.CreateNew<Configuration.GameMapDefinition>();
         map.Number = 0;
         map.TerrainData = new byte[ushort.MaxValue + 3];
@@ -89,6 +113,7 @@ public sealed class NativeCustodyDeliveryTests
         var definition = configurationContext.CreateNew<Configuration.Items.ItemDefinition>();
         definition.Group = 0;
         definition.Number = 1;
+        definition.Name = "Acceptance Sword";
         definition.Width = 1;
         definition.Height = 1;
         definition.MaximumItemLevel = 15;
@@ -114,6 +139,21 @@ public sealed class NativeCustodyDeliveryTests
         setItem.ItemDefinition = definition;
         setItem.ItemSetGroup = set;
         set.Items.Add(setItem);
+        Configuration.GameServerDefinition? hostDefinition = null;
+        if (api)
+        {
+            var profile = configurationContext.CreateNew<Configuration.Items.ItemStatProfile>();
+            profile.Name = "default";
+            configuration.ItemStatProfiles.Add(profile);
+            configuration.ItemPriceDefinitions.Add(configurationContext.CreateNew<Configuration.Items.ItemPriceDefinition>());
+            hostDefinition = configurationContext.CreateNew<Configuration.GameServerDefinition>();
+            hostDefinition.ServerID = 1;
+            hostDefinition.Description = "Isolated Marketplace acceptance";
+            hostDefinition.GameConfiguration = configuration;
+            hostDefinition.ServerConfiguration = configurationContext.CreateNew<Configuration.GameServerConfiguration>();
+            hostDefinition.ServerConfiguration.MaximumPlayers = 20;
+            hostDefinition.ServerConfiguration.Maps.Add(map);
+        }
         Assert.That(await configurationContext.SaveChangesAsync().ConfigureAwait(false), Is.True);
 
         var initializer = new MapInitializer(configuration, NullLogger<MapInitializer>.Instance, NullDropGenerator.Instance, null);
@@ -121,6 +161,17 @@ public sealed class NativeCustodyDeliveryTests
             new PlugInManager(null, NullLoggerFactory.Instance, null, null), NullDropGenerator.Instance, new ConfigurationChangeMediator()) { CallBase = true };
         server.As<IGameServerContext>().SetupGet(s => s.Id).Returns(1);
         var context = server.Object;
+        await using var actualServer = hostDefinition is null ? null : new MUnique.OpenMU.GameServer.GameServer(
+            hostDefinition, Moq.Mock.Of<IGuildServer>(), Moq.Mock.Of<IEventPublisher>(), Moq.Mock.Of<ILoginServer>(), provider,
+            Moq.Mock.Of<IFriendServer>(), NullLoggerFactory.Instance, new PlugInManager(null, NullLoggerFactory.Instance, null, null), new ConfigurationChangeMediator());
+        if (actualServer is not null)
+        {
+            await actualServer.StartAsync().ConfigureAwait(false);
+            Assert.That(actualServer.ServerState.ToString(), Is.EqualTo("Started"));
+            context = (GameContext)actualServer.Context;
+            context.PlugInManager.DiscoverAndRegisterPlugIns(typeof(NativeDeliveryRecoveryPlugIn).Assembly);
+            Assert.That(context.PlugInManager.KnownPlugInTypes, Does.Contain(typeof(NativeDeliveryRecoveryPlugIn)));
+        }
         initializer.PlugInManager = context.PlugInManager;
         initializer.PathFinderPool = context.PathFinderPool;
         var player = new PersistentTestPlayer(context);
@@ -148,6 +199,7 @@ public sealed class NativeCustodyDeliveryTests
             "marketplace-payment-proof-v1-staging.sql", "marketplace-ac-lifecycle-v51028-staging.sql",
             "marketplace-native-ownership-fix3.sql", "marketplace-native-delivery-v51029-staging.sql",
             "marketplace-native-delivery-permissions-v29-staging.sql",
+            "marketplace-zen-native-v51030-staging.sql",
         };
         foreach (var migration in migrations)
         {
@@ -191,6 +243,7 @@ public sealed class NativeCustodyDeliveryTests
         var optionIds = original.ItemOptions.Select(o => ((MUnique.OpenMU.Persistence.IIdentifiable)o).Id).Order().ToArray();
         Assert.That(await sellerPlayer.Inventory!.AddItemAsync(original).ConfigureAwait(false), Is.True);
         Assert.That(await sellerPlayer.SaveProgressAsync().ConfigureAwait(false), Is.True);
+        if (zen) { player.Money = 2000; }
         Assert.That(await player.SaveProgressAsync().ConfigureAwait(false), Is.True);
         var itemId = ((MUnique.OpenMU.Persistence.IIdentifiable)original).Id;
         var escrowId = ((MUnique.OpenMU.Persistence.IIdentifiable)escrow).Id;
@@ -225,6 +278,17 @@ public sealed class NativeCustodyDeliveryTests
         await using var forged = runtime.CreateCommand("UPDATE aether_marketplace.native_custody_delivery SET status='COMPLETED'");
         var denied = Assert.ThrowsAsync<PostgresException>(async () => await forged.ExecuteNonQueryAsync().ConfigureAwait(false));
         Assert.That(denied!.SqlState, Is.EqualTo("42501"));
+        if (api)
+        {
+            if (scenario == "process-crash")
+            {
+                await this.ProcessCrashProbeAsync(context, player, sellerPlayer, original, listing, purchase, ((MUnique.OpenMU.Persistence.IIdentifiable)hostDefinition!).Id).ConfigureAwait(false);
+                return;
+            }
+
+            await ExerciseHttpGatewayAsync(context, this._database, player, sellerPlayer, original, listing, purchase, zen, scenario == "api-cancel").ConfigureAwait(false);
+            return;
+        }
         if (scenario == "acquire-retry")
         {
             await using var intent = runtime.CreateCommand("SELECT aether_marketplace.prepare_native_listing_v29(@listing,@item,@seller,@account,'Origin',1000)");
@@ -235,9 +299,47 @@ public sealed class NativeCustodyDeliveryTests
             Assert.That(await intent.ExecuteScalarAsync().ConfigureAwait(false), Is.EqualTo(escrowId));
         }
 
-        Assert.That(await new GameServerNativeCustody(runtime, "Origin").ListAsync(sellerPlayer, listing, itemId, 1000).ConfigureAwait(false), Is.True);
+        Assert.That(await new GameServerNativeCustody(runtime, "Origin").ListAsync(sellerPlayer, listing, itemId, 1000, zen ? PlayerMarketCurrency.Zen : PlayerMarketCurrency.AetherCoins).ConfigureAwait(false), Is.True);
         Assert.That(sellerPlayer.Inventory.Items.Any(i => ((MUnique.OpenMU.Persistence.IIdentifiable)i).Id == itemId), Is.False);
         Assert.That(await new GameServerNativeCustody(runtime, "Origin").ListAsync(sellerPlayer, Guid.NewGuid(), itemId, 1000).ConfigureAwait(false), Is.False, "Seller cannot reuse custody item");
+        if (scenario.StartsWith("cancel", StringComparison.Ordinal))
+        {
+            await using var cancel = this._database.CreateCommand("SELECT aether_marketplace.cancel_native_listing_v30(@listing,'Origin',@seller,@account)");
+            cancel.Parameters.AddWithValue("listing", listing);
+            cancel.Parameters.AddWithValue("seller", seller);
+            cancel.Parameters.AddWithValue("account", Guid.NewGuid());
+            Assert.That(await cancel.ExecuteScalarAsync().ConfigureAwait(false), Is.EqualTo("UNAUTHORIZED"));
+            cancel.Parameters["account"].Value = sellerAccount;
+            Assert.That(await cancel.ExecuteScalarAsync().ConfigureAwait(false), Is.EqualTo("CANCELLED"));
+            Assert.That(await cancel.ExecuteScalarAsync().ConfigureAwait(false), Is.EqualTo("ALREADY_CANCELLED"));
+            var returns = new GameServerNativeReturns(runtime, context, "Origin");
+            if (scenario == "cancel-full")
+            {
+                var fillers = new List<Entities.Item>();
+                while (sellerPlayer.Inventory.CheckInvSpace(original) is { } slot)
+                {
+                    var filler = sellerPlayer.PersistenceContext.CreateNew<Entities.Item>();
+                    filler.Definition = definition;
+                    await sellerPlayer.Inventory.AddItemAsync(slot, filler).ConfigureAwait(false);
+                    fillers.Add(filler);
+                }
+
+                await sellerPlayer.SaveProgressAsync().ConfigureAwait(false);
+                Assert.That(await returns.ResumeAsync(listing).ConfigureAwait(false), Is.EqualTo(SafeDeliveryStatus.ReconciliationRequired));
+                await sellerPlayer.Inventory.RemoveItemAsync(fillers[0]).ConfigureAwait(false);
+                await sellerPlayer.SaveProgressAsync().ConfigureAwait(false);
+            }
+
+            Assert.That(await returns.ResumeAsync(listing).ConfigureAwait(false), Is.EqualTo(SafeDeliveryStatus.Delivered));
+            Assert.That(await new GameServerNativeReturns(runtime, context, "Origin").ResumeAsync(listing).ConfigureAwait(false), Is.EqualTo(SafeDeliveryStatus.AlreadyDelivered));
+            using var verifyReturn = new PersistenceContextProvider(NullLoggerFactory.Instance, null).CreateNewContext();
+            var owner = await verifyReturn.GetByIdAsync<Entities.Character>(seller).ConfigureAwait(false);
+            Assert.That(owner!.Inventory!.Items.Count(i => ((MUnique.OpenMU.Persistence.IIdentifiable)i).Id == itemId), Is.EqualTo(1));
+            await using var noCharge = this._database.CreateCommand("SELECT count(*) FROM aether_marketplace.settlement_ledger");
+            Assert.That(await noCharge.ExecuteScalarAsync().ConfigureAwait(false), Is.EqualTo(0L));
+            return;
+        }
+
         await using var reservePurchase = this._database.CreateCommand("SELECT aether_marketplace.reserve_purchase(@purchase,@listing,@buyer); SELECT aether_marketplace.prepare_settlement(@purchase)");
         reservePurchase.Parameters.AddWithValue("purchase", purchase);
         reservePurchase.Parameters.AddWithValue("listing", listing);
@@ -246,7 +348,108 @@ public sealed class NativeCustodyDeliveryTests
         var beforePayment = new GameServerCustodyDelivery(runtime, context, "Origin");
         Assert.That(await beforePayment.TryReserveAsync(purchase, character.Id, itemId.ToString("D")).ConfigureAwait(false), Is.False, "Reservation is not payment proof");
         var settlement = new PostgreSqlAuthorizedAcSettlement(this._database, "Origin");
-        Assert.That(await settlement.SettleAsync(player, purchase).ConfigureAwait(false), Is.EqualTo("SETTLED"));
+        await using var zenSource = NpgsqlDataSource.Create(new NpgsqlConnectionStringBuilder(this._database.ConnectionString)
+        {
+            Password = Environment.GetEnvironmentVariable("AETHER_MARKETPLACE_TEST_DB_PASSWORD"),
+            Options = "-c role=aether_v30_settlement_runtime",
+        }.ConnectionString);
+        var zenSettlement = new PostgreSqlAuthorizedZenSettlement(zenSource, context, "Origin");
+        using var staleContext = provider.CreateNewPlayerContext(configuration);
+        var staleInventory = scenario == "stale-session"
+            ? await staleContext.GetByIdAsync<Entities.ItemStorage>(((MUnique.OpenMU.Persistence.IIdentifiable)character.Inventory!).Id).ConfigureAwait(false)
+            : null;
+        if (zen)
+        {
+            Assert.That(await player.RunPersistenceExclusiveAsync(() => zenSettlement.SettleAsync(player, purchase)).ConfigureAwait(false), Is.EqualTo("DEFER_TO_SERVER_QUEUE"));
+            if (scenario == "pre-save-failure")
+            {
+                await using var inject = this._database.CreateCommand("""
+                    CREATE FUNCTION public.fail_zen_flush() RETURNS trigger LANGUAGE plpgsql AS $$
+                    BEGIN RAISE EXCEPTION 'injected pre-payment flush failure'; END $$;
+                    CREATE TRIGGER fail_zen_flush BEFORE UPDATE ON data."ItemStorage"
+                    FOR EACH ROW EXECUTE FUNCTION public.fail_zen_flush();
+                    """);
+                await inject.ExecuteNonQueryAsync().ConfigureAwait(false);
+                player.Money = 2100;
+                try
+                {
+                    Assert.That(await zenSettlement.SettleAsync(player, purchase).ConfigureAwait(false), Is.EqualTo("NATIVE_SAVE_FAILED"));
+                    Assert.That(player.PlayerState.CurrentState, Is.EqualTo(PlayerState.Disconnected));
+                    await using var unchanged = this._database.CreateCommand("SELECT status FROM aether_marketplace.settlement_ledger WHERE purchase_id=@purchase");
+                    unchanged.Parameters.AddWithValue("purchase", purchase);
+                    Assert.That(await unchanged.ExecuteScalarAsync().ConfigureAwait(false), Is.EqualTo("PENDING"));
+                    using var fresh = provider.CreateNewContext();
+                    var balance = await fresh.GetByIdAsync<Entities.Character>(character.Id).ConfigureAwait(false);
+                    Assert.That(balance!.Inventory!.Money, Is.EqualTo(2000));
+                    Assert.That(await new GameServerCustodyDelivery(runtime, context, "Origin").TryReserveAsync(purchase, character.Id, itemId.ToString("D")).ConfigureAwait(false), Is.False);
+                }
+                finally
+                {
+                    inject.CommandText = "DROP TRIGGER fail_zen_flush ON data.\"ItemStorage\"; DROP FUNCTION public.fail_zen_flush()";
+                    await inject.ExecuteNonQueryAsync().ConfigureAwait(false);
+                }
+
+                return;
+            }
+
+            if (scenario == "rollback")
+            {
+                await using var inject = this._database.CreateCommand("""
+                    CREATE FUNCTION public.fail_zen_journal() RETURNS trigger LANGUAGE plpgsql AS $$
+                    BEGIN RAISE EXCEPTION 'injected journal failure'; END $$;
+                    CREATE TRIGGER fail_zen_journal BEFORE INSERT ON aether_marketplace.native_zen_settlement
+                    FOR EACH ROW EXECUTE FUNCTION public.fail_zen_journal();
+                    """);
+                await inject.ExecuteNonQueryAsync().ConfigureAwait(false);
+                Assert.ThrowsAsync<PostgresException>(async () => await zenSettlement.SettleAsync(player, purchase).ConfigureAwait(false));
+                Assert.That(player.Money, Is.EqualTo(2000));
+                Assert.That(sellerPlayer.Money, Is.Zero);
+                inject.CommandText = "DROP TRIGGER fail_zen_journal ON aether_marketplace.native_zen_settlement; DROP FUNCTION public.fail_zen_journal()";
+                await inject.ExecuteNonQueryAsync().ConfigureAwait(false);
+            }
+            if (scenario == "insufficient")
+            {
+                player.Money = 999;
+                Assert.That(await zenSettlement.SettleAsync(player, purchase).ConfigureAwait(false), Is.EqualTo("INSUFFICIENT_FUNDS"));
+                Assert.That(player.Money, Is.EqualTo(999));
+                Assert.That(sellerPlayer.Money, Is.Zero);
+                player.Money = 2000;
+            }
+
+            if (scenario == "overflow")
+            {
+                sellerPlayer.Money = configuration.MaximumInventoryMoney;
+                Assert.That(await zenSettlement.SettleAsync(player, purchase).ConfigureAwait(false), Is.EqualTo("BALANCE_OVERFLOW"));
+                Assert.That(player.Money, Is.EqualTo(2000));
+                sellerPlayer.Money = 0;
+            }
+
+            if (scenario == "concurrent")
+            {
+                var results = await Task.WhenAll(zenSettlement.SettleAsync(player, purchase).AsTask(), zenSettlement.SettleAsync(player, purchase).AsTask()).ConfigureAwait(false);
+                Assert.That(results.Count(r => r == "SETTLED"), Is.EqualTo(1));
+                Assert.That(results.Count(r => r == "ALREADY_SETTLED"), Is.EqualTo(1));
+            }
+            else
+            {
+                Assert.That(await zenSettlement.SettleAsync(player, purchase).ConfigureAwait(false), Is.EqualTo("SETTLED"));
+            }
+
+            Assert.That(player.Money, Is.EqualTo(1000));
+            Assert.That(sellerPlayer.Money, Is.EqualTo(1000));
+            if (staleInventory is not null)
+            {
+                staleInventory.Money = 2500;
+                Assert.ThrowsAsync<MUnique.OpenMU.Persistence.PersistenceConflictException>(async () => await staleContext.SaveChangesAsync().ConfigureAwait(false));
+                Assert.That(await player.PersistenceContext.ReloadInventoryMoneyAsync(character.Inventory!).ConfigureAwait(false), Is.EqualTo(1000));
+            }
+            await using var fee = this._database.CreateCommand("SELECT count(*) FROM aether_marketplace.castle_treasury_ledger");
+            Assert.That(await fee.ExecuteScalarAsync().ConfigureAwait(false), Is.EqualTo(0L));
+        }
+        else
+        {
+            Assert.That(await settlement.SettleAsync(player, purchase).ConfigureAwait(false), Is.EqualTo("SETTLED"));
+        }
         var native = new GameServerCustodyDelivery(runtime, context, "Origin");
         var coordinator = new SafeDeliveryCoordinator(native, native);
         Assert.That(await new GameServerCustodyDelivery(runtime, context, "Legacy").TryReserveAsync(purchase, character.Id, itemId.ToString("D")).ConfigureAwait(false), Is.False);
@@ -423,7 +626,7 @@ public sealed class NativeCustodyDeliveryTests
         Assert.That(await new SafeDeliveryCoordinator(new GameServerCustodyDelivery(this._database, context, "Origin"), new GameServerCustodyDelivery(this._database, context, "Origin")).DeliverAsync(purchase, character.Id, itemId.ToString("D")).ConfigureAwait(false), Is.EqualTo(SafeDeliveryStatus.AlreadyDelivered));
         if (scenario is not "lost-ack" and not "disconnect-during")
         {
-            Assert.That(await settlement.SettleAsync(player, purchase).ConfigureAwait(false), Is.EqualTo("ALREADY_SETTLED"));
+            Assert.That(zen ? await zenSettlement.SettleAsync(player, purchase).ConfigureAwait(false) : await settlement.SettleAsync(player, purchase).ConfigureAwait(false), Is.EqualTo("ALREADY_SETTLED"));
         }
         player.PersistenceContext.Dispose();
         var reopenedProvider = new PersistenceContextProvider(NullLoggerFactory.Instance, null);
@@ -447,6 +650,106 @@ public sealed class NativeCustodyDeliveryTests
         await using var verify = this._database.CreateCommand("SELECT status FROM aether_marketplace.purchase_reservation WHERE purchase_id=@id");
         verify.Parameters.AddWithValue("id", purchase);
         Assert.That(await verify.ExecuteScalarAsync().ConfigureAwait(false), Is.EqualTo("COMPLETED"));
+    }
+
+    private static async Task ExerciseHttpGatewayAsync(GameContext context, NpgsqlDataSource database, Player buyer, Player seller, Entities.Item original, Guid listing, Guid purchase, bool zen, bool cancel)
+    {
+        var variable = "AETHER_GATEWAY_TEST_" + Guid.NewGuid().ToString("N");
+        var secret = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
+        Environment.SetEnvironmentVariable(variable, new NpgsqlConnectionStringBuilder(database.ConnectionString)
+        {
+            Password = Environment.GetEnvironmentVariable("AETHER_MARKETPLACE_TEST_DB_PASSWORD"),
+            Options = "-c role=aether_v30_settlement_runtime",
+        }.ConnectionString);
+        try
+        {
+            var builder = Microsoft.AspNetCore.Builder.WebApplication.CreateBuilder();
+            Microsoft.AspNetCore.Hosting.WebHostBuilderKestrelExtensions.UseKestrel(builder.WebHost);
+            Microsoft.AspNetCore.Hosting.HostingAbstractionsWebHostBuilderExtensions.UseUrls(builder.WebHost, "http://127.0.0.1:0");
+            await using var app = builder.Build();
+            var gateway = new AetherMarketplaceGateway.MarketplaceGateway(() => new[] { context }, new()
+            {
+                Enabled = true,
+                Secret = secret,
+                Routing = new NativeDeliveryPlugInConfiguration
+                {
+                    Realms = new() { [1] = "Origin" },
+                    ConnectionVariables = new() { ["Origin"] = variable },
+                },
+            }, app.Logger);
+            gateway.Map(app);
+            await app.StartAsync().ConfigureAwait(false);
+            using var client = new HttpClient { BaseAddress = new Uri(app.Urls.Single()) };
+            if (Environment.GetEnvironmentVariable("AETHER_V30_BROWSER_ACCEPTANCE") == "1")
+            {
+                await RunBrowserAsync(client.BaseAddress, secret).ConfigureAwait(false);
+                return;
+            }
+
+            using (var denied = await client.PostAsJsonAsync("/internal/marketplace/characters", new { realm = "origin", websiteAccountId = 102 }).ConfigureAwait(false))
+            {
+                Assert.That(denied.StatusCode, Is.EqualTo(System.Net.HttpStatusCode.Unauthorized));
+            }
+
+            client.DefaultRequestHeaders.Authorization = new("Bearer", secret);
+            async Task<JsonElement> SendAsync(string operation, object body, System.Net.HttpStatusCode status = System.Net.HttpStatusCode.OK)
+            {
+                using var response = await client.PostAsJsonAsync("/internal/marketplace/" + operation, body).ConfigureAwait(false);
+                var text = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                Assert.That(response.StatusCode, Is.EqualTo(status), text);
+                using var document = JsonDocument.Parse(text);
+                return document.RootElement.Clone();
+            }
+
+            var characters = await SendAsync("characters", new { realm = "origin", websiteAccountId = 102 }).ConfigureAwait(false);
+            Assert.That(characters.GetProperty("items").EnumerateArray().Single().GetProperty("id").GetGuid(), Is.EqualTo(seller.SelectedCharacter!.Id));
+            await SendAsync("inventory", new { realm = "origin", websiteAccountId = 999, characterId = seller.SelectedCharacter.Id }, System.Net.HttpStatusCode.Forbidden).ConfigureAwait(false);
+            var inventory = await SendAsync("inventory", new { realm = "origin", websiteAccountId = 102, characterId = seller.SelectedCharacter.Id }).ConfigureAwait(false);
+            Assert.That(inventory.GetProperty("items").GetArrayLength(), Is.EqualTo(1));
+            var itemId = ((MUnique.OpenMU.Persistence.IIdentifiable)original).Id;
+            var listed = await SendAsync("list", new { realm = "origin", websiteAccountId = 102, characterId = seller.SelectedCharacter.Id, operationId = listing, itemId, currency = zen ? "Zen" : "AetherCoins", price = "1000" }).ConfigureAwait(false);
+            Assert.That(listed.GetProperty("code").GetString(), Is.EqualTo("LISTED"));
+            var browse = await SendAsync("browse", new { realm = "origin", websiteAccountId = 101, search = "Acceptance" }).ConfigureAwait(false);
+            Assert.That(browse.GetProperty("items").EnumerateArray().Single().GetProperty("item").GetProperty("Id").GetGuid(), Is.EqualTo(itemId));
+            Player recipient;
+            if (cancel)
+            {
+                var refused = await SendAsync("cancel", new { realm = "origin", websiteAccountId = 101, characterId = buyer.SelectedCharacter!.Id, listingId = listing }, System.Net.HttpStatusCode.Conflict).ConfigureAwait(false);
+                Assert.That(refused.GetProperty("code").GetString(), Is.EqualTo("UNAUTHORIZED"));
+                var returned = await SendAsync("cancel", new { realm = "origin", websiteAccountId = 102, characterId = seller.SelectedCharacter.Id, listingId = listing }).ConfigureAwait(false);
+                Assert.That(returned.GetProperty("code").GetString(), Is.EqualTo("CANCELLED"));
+                recipient = seller;
+            }
+            else
+            {
+                var command = new { realm = "origin", websiteAccountId = 101, characterId = buyer.SelectedCharacter!.Id, operationId = purchase, listingId = listing };
+                var bought = await SendAsync("buy", command).ConfigureAwait(false);
+                Assert.That(bought.GetProperty("code").GetString(), Is.EqualTo("COMPLETED"));
+                var replay = await SendAsync("buy", command).ConfigureAwait(false);
+                Assert.That(replay.GetProperty("code").GetString(), Is.EqualTo("COMPLETED"));
+                var history = await SendAsync("history", new { realm = "origin", websiteAccountId = 101 }).ConfigureAwait(false);
+                Assert.That(history.GetProperty("items").EnumerateArray().Single().GetProperty("purchaseStatus").GetString(), Is.EqualTo("COMPLETED"));
+                recipient = buyer;
+            }
+
+            using var fresh = context.PersistenceContextProvider.CreateNewContext();
+            var restored = await fresh.GetByIdAsync<Entities.Character>(recipient.SelectedCharacter!.Id).ConfigureAwait(false);
+            var item = restored!.Inventory!.Items.Single(i => ((MUnique.OpenMU.Persistence.IIdentifiable)i).Id == itemId);
+            Assert.Multiple(() =>
+            {
+                Assert.That(item.Level, Is.EqualTo(13));
+                Assert.That(item.Durability, Is.EqualTo(37.25));
+                Assert.That(item.SocketCount, Is.EqualTo(5));
+                Assert.That(item.PetExperience, Is.EqualTo(4321));
+                Assert.That(item.ItemOptions.Count, Is.EqualTo(5));
+                Assert.That(item.ItemSetGroups.Single().AncientSetDiscriminator, Is.EqualTo(2));
+            });
+            await app.StopAsync().ConfigureAwait(false);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(variable, null);
+        }
     }
 
     private sealed class PersistentTestPlayer(IGameContext context) : Player(context)

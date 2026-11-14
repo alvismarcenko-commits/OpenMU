@@ -1,4 +1,4 @@
-﻿// <copyright file="EntityDataContext.cs" company="MUnique">
+// <copyright file="EntityDataContext.cs" company="MUnique">
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 // </copyright>
 
@@ -164,6 +164,10 @@ public class EntityDataContext : ExtendedTypeContext
         modelBuilder.Entity<ItemStatTerms>().Apply();
         modelBuilder.Entity<ItemRequirementFormula>().Apply();
         modelBuilder.Entity<ItemStorage>().Apply();
+
+        // Marketplace settlement may update native Zen through another connection.
+        // A stale player context must fail rather than overwrite a committed balance.
+        modelBuilder.Entity<ItemStorage>().Property(s => s.Money).IsConcurrencyToken();
         modelBuilder.Entity<ItemBasePowerUpDefinition>();
         modelBuilder.Entity<LevelBonus>().Apply();
         modelBuilder.Entity<MagicEffectDefinition>().Apply();

@@ -30,6 +30,10 @@ var plugInConfigurations = new List<PlugInConfiguration>();
 
 // Add services to the container.
 var services = builder.Services;
+services.AddSingleton<AetherMarketplaceGateway.MarketplaceGateway>(provider => new(
+    () => new IGameContext[] { provider.GetRequiredService<GameServer>().Context },
+    AetherMarketplaceGateway.MarketplaceGatewayOptions.FromEnvironment(),
+    provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<AetherMarketplaceGateway.MarketplaceGateway>>()));
 services.AddSingleton<GameServer>()
     .AddSingleton<DaprAppTokenAuthorizationFilter>()
     .AddSingleton<AdministrationDeliveries>()
@@ -67,6 +71,7 @@ metricsRegistry.AddMeters(MUnique.OpenMU.GameLogic.Metrics.Meters);
 builder.AddOpenTelemetryMetrics(metricsRegistry);
 
 var app = builder.BuildAndConfigure(false);
+app.Services.GetRequiredService<AetherMarketplaceGateway.MarketplaceGateway>().Map(app);
 app.UseStaticFiles();
 app.UseAntiforgery();
 app.MapRazorComponents<MUnique.OpenMU.GameServer.Host.App>()

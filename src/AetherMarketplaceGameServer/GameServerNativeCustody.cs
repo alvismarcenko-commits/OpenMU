@@ -4,6 +4,7 @@
 namespace AetherMarketplaceGameServer;
 
 using System.Threading;
+using AetherMarketplaceDelivery;
 using MUnique.OpenMU.GameLogic;
 using MUnique.OpenMU.GameLogic.Views.Inventory;
 using Npgsql;
@@ -33,7 +34,23 @@ public sealed class GameServerNativeCustody
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>Whether custody was durably established.</returns>
     public async ValueTask<bool> ListAsync(Player seller, Guid listingId, Guid itemId, long price, CancellationToken cancellationToken = default)
+        => await this.ListAsync(seller, listingId, itemId, price, PlayerMarketCurrency.AetherCoins, cancellationToken).ConfigureAwait(false);
+
+    /// <summary>Lists a native item using one of the approved currencies.</summary>
+    /// <param name="seller">The authenticated seller.</param>
+    /// <param name="listingId">The idempotency key.</param>
+    /// <param name="itemId">The original item identity.</param>
+    /// <param name="price">The price in the selected currency.</param>
+    /// <param name="currency">The approved currency.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>Whether native custody was established.</returns>
+    public async ValueTask<bool> ListAsync(Player seller, Guid listingId, Guid itemId, long price, PlayerMarketCurrency currency, CancellationToken cancellationToken = default)
     {
+        if (!Enum.IsDefined(currency))
+        {
+            return false;
+        }
+
         return await seller.RunPersistenceExclusiveAsync(
             async () =>
             {
@@ -57,13 +74,14 @@ public sealed class GameServerNativeCustody
                     return false;
                 }
 
-                await using var command = this._source.CreateCommand("SELECT aether_marketplace.prepare_native_listing_v29(@listing,@item,@seller,@account,@realm,@price)");
+                await using var command = this._source.CreateCommand("SELECT aether_marketplace.prepare_native_listing_v30(@listing,@item,@seller,@account,@realm,@price,@currency)");
                 command.Parameters.AddWithValue("listing", listingId);
                 command.Parameters.AddWithValue("item", itemId);
                 command.Parameters.AddWithValue("seller", character.Id);
                 command.Parameters.AddWithValue("account", account.Id);
                 command.Parameters.AddWithValue("realm", this._realm);
                 command.Parameters.AddWithValue("price", price);
+                command.Parameters.AddWithValue("currency", currency.ToString());
                 var escrowId = (Guid)(await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false)
                     ?? throw new InvalidOperationException("Custody storage missing."));
                 var escrow = await seller.PersistenceContext.LoadCustodyStorageAsync(escrowId, cancellationToken).ConfigureAwait(false)

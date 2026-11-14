@@ -390,6 +390,10 @@ internal sealed class Program : IDisposable
         }
 
         _ = typeof(AetherMarketplaceGameServer.NativeDeliveryRecoveryPlugIn).Assembly.GetName();
+        builder.Services.AddSingleton<AetherMarketplaceGateway.MarketplaceGateway>(provider => new(
+            () => this._gameServers.Values.OfType<IGameServerContextProvider>().Select(server => (IGameContext)server.Context),
+            AetherMarketplaceGateway.MarketplaceGatewayOptions.FromEnvironment(),
+            provider.GetRequiredService<ILogger<AetherMarketplaceGateway.MarketplaceGateway>>()));
         builder.Services.AddSingleton(this._servers)
             .AddSingleton<IConfigurationChangePublisher, ConfigurationChangeHandler>()
             .AddSingleton<IConfigurationChangeListener, ConfigurationChangeListener>()
@@ -477,6 +481,8 @@ internal sealed class Program : IDisposable
             host.ConfigureAdminPanel();
             host.MapAdminMcp();
         }
+
+        host.Services.GetRequiredService<AetherMarketplaceGateway.MarketplaceGateway>().Map(host);
 
         // When the server is started with an uninitialized database, the plugin configurations
         // are not available yet. They're created during the data initialization, so we have to

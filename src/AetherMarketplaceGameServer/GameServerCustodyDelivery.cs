@@ -115,7 +115,7 @@ public sealed class GameServerCustodyDelivery : ISafeDeliveryJournal, IRecoverab
             JOIN aether_marketplace.native_account_binding b
               ON b.realm=d.realm AND b.character_id=d.buyer_character_id AND b.openmu_account_id=d.buyer_account_id
             WHERE d.purchase_id=@id AND d.realm=@realm AND d.status='PENDING'
-              AND aether_marketplace.verify_ac_settlement_accounting_v2(d.purchase_id)='ACCOUNTING_PROOF_VALID'
+              AND aether_marketplace.verify_native_settlement_v30(d.purchase_id)='ACCOUNTING_PROOF_VALID'
             """);
         command.Parameters.AddWithValue("id", deliveryId);
         command.Parameters.AddWithValue("realm", this._realm);

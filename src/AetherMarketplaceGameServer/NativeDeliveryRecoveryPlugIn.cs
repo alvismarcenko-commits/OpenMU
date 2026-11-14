@@ -66,7 +66,7 @@ public sealed class NativeDeliveryRecoveryPlugIn : IPeriodicTaskPlugIn, IDisable
 
             // Resume interrupted seller custody acquisition before exposing a listing.
             await using (var acquiring = source.CreateCommand("""
-                SELECT l.listing_id,l.item_instance_id,l.seller_character_id,l.price
+                SELECT l.listing_id,l.item_instance_id,l.seller_character_id,l.price,l.currency
                 FROM aether_marketplace.player_listing l
                 JOIN aether_marketplace.native_item_custody c ON c.listing_id=l.listing_id
                 WHERE l.realm=@realm AND l.status='DRAFT' AND c.status='ACQUIRING'
@@ -75,12 +75,12 @@ public sealed class NativeDeliveryRecoveryPlugIn : IPeriodicTaskPlugIn, IDisable
             {
                 acquiring.Parameters.AddWithValue("realm", realm);
                 acquiring.Parameters.AddWithValue("characters", characters);
-                var listings = new List<(Guid Listing, Guid Item, Guid Seller, long Price)>();
+                var listings = new List<(Guid Listing, Guid Item, Guid Seller, long Price, PlayerMarketCurrency Currency)>();
                 await using (var reader = await acquiring.ExecuteReaderAsync().ConfigureAwait(false))
                 {
                     while (await reader.ReadAsync().ConfigureAwait(false))
                     {
-                        listings.Add((reader.GetGuid(0), reader.GetGuid(1), reader.GetGuid(2), reader.GetInt64(3)));
+                        listings.Add((reader.GetGuid(0), reader.GetGuid(1), reader.GetGuid(2), reader.GetInt64(3), Enum.Parse<PlayerMarketCurrency>(reader.GetString(4))));
                     }
                 }
 
@@ -90,7 +90,7 @@ public sealed class NativeDeliveryRecoveryPlugIn : IPeriodicTaskPlugIn, IDisable
                     var sellers = players.Where(p => p.SelectedCharacter?.Id == listing.Seller).Take(2).ToArray();
                     if (sellers.Length == 1)
                     {
-                        await new GameServerNativeCustody(source, realm).ListAsync(sellers[0], listing.Listing, listing.Item, listing.Price).ConfigureAwait(false);
+                        await new GameServerNativeCustody(source, realm).ListAsync(sellers[0], listing.Listing, listing.Item, listing.Price, listing.Currency).ConfigureAwait(false);
                     }
                 }
             }
@@ -101,7 +101,7 @@ public sealed class NativeDeliveryRecoveryPlugIn : IPeriodicTaskPlugIn, IDisable
                 SELECT p.purchase_id,p.buyer_character_id,c.item_instance_id
                 FROM aether_marketplace.purchase_reservation p
                 JOIN aether_marketplace.native_item_custody c ON c.listing_id=p.listing_id
-                WHERE p.realm=@realm AND p.status='DELIVERY_PENDING' AND p.currency='AetherCoins'
+                WHERE p.realm=@realm AND p.status='DELIVERY_PENDING' AND p.currency IN ('AetherCoins','Zen')
                   AND p.buyer_character_id=ANY(@characters)
                 ORDER BY p.created_at LIMIT 100
                 """);
@@ -119,6 +119,23 @@ public sealed class NativeDeliveryRecoveryPlugIn : IPeriodicTaskPlugIn, IDisable
             foreach (var delivery in deliveries)
             {
                 await coordinator.DeliverAsync(delivery.Purchase, delivery.Buyer, delivery.Item.ToString("D")).ConfigureAwait(false);
+            }
+
+            await using var pendingReturns = source.CreateCommand("SELECT listing_id FROM aether_marketplace.native_listing_return WHERE realm=@realm AND status='PENDING' AND seller_character_id=ANY(@characters) LIMIT 100");
+            pendingReturns.Parameters.AddWithValue("realm", realm);
+            pendingReturns.Parameters.AddWithValue("characters", characters);
+            var returnIds = new List<Guid>();
+            await using (var reader = await pendingReturns.ExecuteReaderAsync().ConfigureAwait(false))
+            {
+                while (await reader.ReadAsync().ConfigureAwait(false))
+                {
+                    returnIds.Add(reader.GetGuid(0));
+                }
+            }
+
+            foreach (var id in returnIds)
+            {
+                await new GameServerNativeReturns(source, gameContext, realm).ResumeAsync(id).ConfigureAwait(false);
             }
         }
         catch (Exception ex)
