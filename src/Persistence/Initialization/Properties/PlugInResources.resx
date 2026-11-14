@@ -408,4 +408,6 @@
   <data name="AddItemPriceDefinitionsPlugIn_Description" xml:space="preserve"><value>This update adds the price definitions of special items like jewels, potions and event tickets, which were hard-coded before. Without it, these items are priced like usual equipment.</value></data>
   <data name="AddCrystalSwordIceChanceUpdatePlugIn_Name" xml:space="preserve"><value>Add Crystal Sword Ice Chance</value></data>
   <data name="AddCrystalSwordIceChanceUpdatePlugIn_Description" xml:space="preserve"><value>Adds the Crystal Sword ice chance, which turns an attack into an ice skill instead.</value></data>
+  <data name="FixClassicWorldConfiguration_Name" xml:space="preserve"><value>Correct classic world gates, Hanzo store and Karutan terrain</value></data>
+  <data name="FixClassicWorldConfiguration_Description" xml:space="preserve"><value>Repairs only the known Season 6 Arena spawn points, Hanzo slot collision and legacy Karutan terrain bytes. Customized data is preserved.</value></data>
 </root>
