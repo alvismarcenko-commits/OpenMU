@@ -55,6 +55,17 @@ stat-bonus descriptions are not the current APP policy. Do not import those
 legacy profiles as a substitute for the reviewed Prestige migrations and
 per-realm plugin configuration. No existing APP balances were migrated.
 
+### Origin staging activation correction
+
+The explicit operator activation in
+`deploy/aethermu-europe/origin-prestige-staging` supplies the previously missing
+Prestige schema, counter configuration, verified enrollment and active feature /
+command settings for the nonce-owned x1 fixture. Origin exchanges 25 resets for
+one GR and 100 APP, with level 1 and zero resets afterwards. Other realms remain
+inactive. Existing normal Reset costs and progression settings are preserved.
+This is an isolated deployment correction, not a change to OpenMU's opt-out
+defaults or a production activation.
+
 The optional world configuration updater is included in source; it is not
 silently applied to an existing database. Devias invalid object coordinates and
 missing client/audio resources still require authenticated replacement inputs.
