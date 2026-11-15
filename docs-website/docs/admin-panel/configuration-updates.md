@@ -100,3 +100,19 @@ applied on top of a current schema.
   rates, monster stats), you may want to deselect it and merge the change
   yourself in the [game configuration](game-configuration.md).
 * Apply updates during a maintenance window, since a restart is needed anyway.
+
+### Classic world restoration candidate
+
+The optional **Correct classic world gates, Hanzo store and Karutan terrain**
+update repairs the two known Season 6 Arena respawn points, the duplicate Hanzo
+store slot and the exact legacy Karutan terrain byte streams. It preserves
+operator-customized terrain and item locations; it does not restore client
+objects or establish original WEBZEN asset provenance. Fresh Season 6 worlds
+contain the corresponding initializer corrections.
+
+Review and test this update on an isolated copy before selecting it for an
+existing server. The repository's `tools/world-validation` utility can inspect
+an exported configuration and client assets without applying any updates or
+connecting to PostgreSQL. Follow its README for the input format and commands.
+Validation findings do not authorize automatic repairs, and an offline PASS
+does not replace a real game session.

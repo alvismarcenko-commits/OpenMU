@@ -185,8 +185,8 @@ public class Gates : InitializerBase
         // Exile
         // Arena
         targetGates.Add(50, this.CreateExitGate(maps[6], 101, 115, 103, 117, 0, true));
-        targetGates.Add(51, this.CreateExitGate(maps[6], 107, 115, 107, 115, 0, true));
-        targetGates.Add(52, this.CreateExitGate(maps[6], 107, 114, 107, 114, 0, true));
+        targetGates.Add(51, this.CreateExitGate(maps[6], 101, 115, 101, 115, 0, true));
+        targetGates.Add(52, this.CreateExitGate(maps[6], 102, 115, 102, 115, 0, true));
 
         // Atlans
         targetGates.Add(49, this.CreateExitGate(maps[7], 15, 11, 27, 23, 0, true));
