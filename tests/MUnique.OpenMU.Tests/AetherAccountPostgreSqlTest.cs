@@ -57,13 +57,15 @@ public partial class GrandResetPostgreSqlTest
         });
     }
 
-    [TestCase("40001", true)]
-    [TestCase("40P01", true)]
-    [TestCase("23505", false)]
-    [TestCase("42601", false)]
-    public void RetryClassificationPreservesEfWrappedSqlState(string sqlState, bool retryable)
+    [TestCase("40001", null, true)]
+    [TestCase("40P01", null, true)]
+    [TestCase("23505", null, false)]
+    [TestCase("23505", "unrelated_unique_constraint", false)]
+    [TestCase("23505", "aether_native_login_folded", true)]
+    [TestCase("42601", null, false)]
+    public void RetryClassificationPreservesEfWrappedSqlState(string sqlState, string? constraintName, bool retryable)
     {
-        var postgres = new PostgresException("test-only failure", "ERROR", "ERROR", sqlState);
+        var postgres = new PostgresException("test-only failure", "ERROR", "ERROR", sqlState, constraintName: constraintName);
         var wrapped = new InvalidOperationException("EF transient wrapper",
             new Microsoft.EntityFrameworkCore.DbUpdateException("save wrapper", postgres));
         Assert.That(AetherAccountService.IsRetryableTransactionFailure(wrapped), Is.EqualTo(retryable));

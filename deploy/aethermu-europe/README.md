@@ -1,5 +1,11 @@
 # AetherMU Europe profiles
 
+> Historical stat-bonus profiles. The unified V5.10.31 candidate imports the
+> newer transactional Prestige/100 APP implementation. Do not activate these
+> legacy profiles as its configuration. See
+> `docs-website/docs/getting-started/aether-unified-v51031.md` for provenance and
+> the remaining per-realm migration and activation gates.
+
 These are explicit admin import fragments, not startup appsettings. No profile is activated by this change.
 
 | Profile | ExperienceRate | MasterExperienceRate | Grand Reset |

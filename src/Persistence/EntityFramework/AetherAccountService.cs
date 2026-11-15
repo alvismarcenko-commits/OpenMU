@@ -85,7 +85,12 @@ public sealed class AetherAccountService
     {
         for (Exception? current = exception; current is not null; current = current.InnerException)
         {
-            if (current is PostgresException postgres && postgres.SqlState is "40001" or "40P01" or "23505")
+            // A concurrent replay can retain a snapshot taken before the owner lock was
+            // acquired and collide with this bridge's folded-login index. Other unique
+            // violations are integrity failures, not a reason to retry the operation.
+            if (current is PostgresException postgres
+                && (postgres.SqlState is "40001" or "40P01"
+                    || (postgres.SqlState == "23505" && postgres.ConstraintName == "aether_native_login_folded")))
             {
                 return true;
             }
