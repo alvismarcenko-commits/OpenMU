@@ -6,6 +6,7 @@ namespace MUnique.OpenMU.GameLogic;
 
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using Nito.AsyncEx;
 
 /// <summary>
 /// A state machine which is dynamically built, based on a <see cref="SkillComboDefinition"/>.
@@ -16,7 +17,8 @@ public sealed class ComboStateMachine : StateMachine
     private static readonly ConcurrentDictionary<SkillComboDefinition, (ComboState Inital, ComboState Final)> StateCache = new();
 
     private readonly TimeSpan _maximumCompletionTime;
-    private DateTime _lastStartedCombo;
+    private readonly AsyncLock _registrationLock = new();
+    private long _lastStartedCombo;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ComboStateMachine"/> class.
@@ -62,9 +64,10 @@ public sealed class ComboStateMachine : StateMachine
     /// <returns><see langword="true"/>, if the combo completed; otherwise, <see langword="false"/>.</returns>
     public async ValueTask<bool> RegisterSkillAsync(Skill skill)
     {
-        if (DateTime.UtcNow - this._lastStartedCombo > this._maximumCompletionTime)
+        using var registration = await this._registrationLock.LockAsync().ConfigureAwait(false);
+        if (this.CurrentState != this.InitialState && Stopwatch.GetElapsedTime(this._lastStartedCombo) > this._maximumCompletionTime)
         {
-            // If it took to long, reset to initial state.
+            // A server clock correction must not extend the combo window.
             await this.TryAdvanceToAsync(this.InitialState).ConfigureAwait(false);
         }
 
@@ -78,10 +81,13 @@ public sealed class ComboStateMachine : StateMachine
 
         if (this.CurrentState == this.InitialState)
         {
-            this._lastStartedCombo = DateTime.UtcNow;
+            this._lastStartedCombo = Stopwatch.GetTimestamp();
         }
 
-        await this.TryAdvanceToAsync(nextPossibleSkillState).ConfigureAwait(false);
+        if (!await this.TryAdvanceToAsync(nextPossibleSkillState).ConfigureAwait(false))
+        {
+            return false;
+        }
 
         var canComplete = this.CurrentState?.PossibleTransitions?.Contains(this.FinalState) ?? false;
         if (canComplete && await this.TryAdvanceToAsync(this.FinalState).ConfigureAwait(false))
@@ -91,6 +97,14 @@ public sealed class ComboStateMachine : StateMachine
         }
 
         return false;
+    }
+
+    /// <summary>Discards a partial sequence when the character starts a new progression cycle.</summary>
+    /// <returns>The reset task.</returns>
+    internal async ValueTask ResetAsync()
+    {
+        using var registration = await this._registrationLock.LockAsync().ConfigureAwait(false);
+        await this.TryAdvanceToAsync(this.InitialState).ConfigureAwait(false);
     }
 
     private static (ComboState Initial, ComboState Final) GetOrCreateStates(SkillComboDefinition comboDefinition)

@@ -59,6 +59,11 @@ public sealed class DroppedItem : AsyncDisposable, ILocateable
     /// <param name="owners">The owners.</param>
     /// <param name="wasItemPersisted">If set to <c>true</c>, the item was persisted before and exists on the database.</param>
     public DroppedItem(Item item, Point position, GameMap map, Player? dropper, IEnumerable<object>? owners, bool wasItemPersisted = false)
+        : this(item, position, map, dropper, owners, wasItemPersisted, map.ItemDropDuration)
+    {
+    }
+
+    internal DroppedItem(Item item, Point position, GameMap map, Player? dropper, IEnumerable<object>? owners, bool wasItemPersisted, TimeSpan lifetime)
     {
         this.Item = item;
         this.Position = position;
@@ -66,7 +71,21 @@ public sealed class DroppedItem : AsyncDisposable, ILocateable
         this._dropper = dropper;
         this._owners = owners;
         this._wasItemPersisted = wasItemPersisted;
-        this._removeTimer = new Timer(this.DisposeAndDelete, null, (int)map.ItemDropDuration.TotalMilliseconds, Timeout.Infinite);
+        this._removeTimer = new Timer(this.DisposeAndDelete, null, lifetime, Timeout.InfiniteTimeSpan);
+    }
+
+    internal Guid? TreasureOccurrence { get; init; }
+
+    internal bool IsRaidReward { get; init; }
+
+    internal async ValueTask ExpireTreasureAsync()
+    {
+        using (await this._pickupLock.LockAsync().ConfigureAwait(false))
+        {
+            this._availableToPick = false;
+        }
+
+        await this.DisposeAsync().ConfigureAwait(false);
     }
 
     /// <summary>
@@ -88,7 +107,7 @@ public sealed class DroppedItem : AsyncDisposable, ILocateable
     /// <summary>
     /// Gets a value indicating whether the owner-pickup priority period is still active.
     /// </summary>
-    public bool IsOwnerPickupPriorityActive => DateTime.UtcNow < this._dropTimestamp.Add(TimeUntilDropIsFree);
+    public bool IsOwnerPickupPriorityActive => this.IsRaidReward || DateTime.UtcNow < this._dropTimestamp.Add(TimeUntilDropIsFree);
 
     /// <summary>
     /// Tries to pick the item up by the specified player.
@@ -104,7 +123,7 @@ public sealed class DroppedItem : AsyncDisposable, ILocateable
     public async ValueTask<(bool Success, Item? StackTarget)> TryPickUpByAsync(Player player)
     {
         Item? stackTarget = null;
-        if (!this._availableToPick)
+        if (!this._availableToPick || (this.TreasureOccurrence is not null && player is not IHasIpAddress { IpAddress: not null }))
         {
             return (false, stackTarget);
         }
@@ -129,8 +148,7 @@ public sealed class DroppedItem : AsyncDisposable, ILocateable
             return (false, stackTarget);
         }
 
-        if (!this.IsPlayerAnOwner(player)
-            && DateTime.UtcNow < this._dropTimestamp.Add(TimeUntilDropIsFree))
+        if (!this.IsPlayerAnOwner(player) && this.IsOwnerPickupPriorityActive)
         {
             return (false, stackTarget);
         }

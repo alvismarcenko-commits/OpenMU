@@ -71,6 +71,13 @@ public abstract class BaseInvasionPlugIn<TConfiguration> : PeriodicTaskBasePlugI
     /// <param name="y">The optional fixed Y coordinate.</param>
     protected async ValueTask CreateMonstersAsync(IGameContext gameContext, ILogger logger, GameMap gameMap, MonsterDefinition monsterDefinition, ushort quantity, bool announceDeath = false, byte? x = null, byte? y = null)
     {
+        if (x is { } fixedX && y is { } fixedY
+            && (!gameMap.Terrain.WalkMap[fixedX, fixedY] || gameMap.Terrain.SafezoneMap[fixedX, fixedY]))
+        {
+            logger.LogWarning("Skipping {Monster} on {Map}: the configured spawn cell is blocked or protected.", monsterDefinition.Designation, gameMap.Definition.Name);
+            return;
+        }
+
         for (var i = 0; i < quantity; i++)
         {
             Point? spawnPoint = (x.HasValue && y.HasValue)
@@ -236,13 +243,19 @@ public abstract class BaseInvasionPlugIn<TConfiguration> : PeriodicTaskBasePlugI
     /// <inheritdoc />
     protected override async ValueTask OnPreparedAsync(InvasionGameServerState state)
     {
-        await state.Context.ForEachPlayerAsync(p => this.TrySendStartMessageAsync(p, state)).ConfigureAwait(false);
+        if (this.AnnounceWhenPrepared)
+        {
+            await state.Context.ForEachPlayerAsync(p => this.TrySendStartMessageAsync(p, state)).ConfigureAwait(false);
+        }
 
         if (this.EventType is not null)
         {
             await state.Context.ForEachPlayerAsync(p => this.TrySendMapEventStateUpdateAsync(p, state)).ConfigureAwait(false);
         }
     }
+
+    /// <summary>Gets a value indicating whether the preparation stage also announces the invasion.</summary>
+    protected virtual bool AnnounceWhenPrepared => true;
 
     /// <inheritdoc />
     protected override async ValueTask OnStartedAsync(InvasionGameServerState state)

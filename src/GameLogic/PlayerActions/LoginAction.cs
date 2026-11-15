@@ -15,6 +15,8 @@ public class LoginAction
 {
     private static int _templateCounter;
 
+    private static readonly bool IsAscensionStaging = Environment.GetEnvironmentVariable("AETHER_LOCAL_STAGING") == "true";
+
     /// <summary>
     /// Logins the specified player.
     /// </summary>
@@ -79,6 +81,11 @@ public class LoginAction
             if (state is null)
             {
                 player.Logger.LogInformation("Account not found or invalid password, username: [{Username}].", username);
+                if (IsAscensionStaging && player.GameContext is IGameServerContext server)
+                {
+                    await server.EventPublisher.GameEventAsync(new AetherObservationEvent(server.Id, DateTime.UtcNow, "security", "invalid_credentials")).ConfigureAwait(false);
+                }
+
                 await player.InvokeViewPlugInAsync<IShowLoginResultPlugIn>(p => p.ShowLoginResultAsync(LoginResult.InvalidPassword)).ConfigureAwait(false);
             }
 
@@ -131,7 +138,7 @@ public class LoginAction
                 var isTemplateOffline = offlinePlayer!.IsTemplatePlayer;
                 if (!isTemplateOffline)
                 {
-                    if (!await gameServerContext.LoginServer.TryLoginAsync(username, gameServerContext.Id).ConfigureAwait(false))
+                    if (!await TryRegisterAsync(player, gameServerContext, username).ConfigureAwait(false))
                     {
                         context.Allowed = false;
                         await player.InvokeViewPlugInAsync<IShowLoginResultPlugIn>(p => p.ShowLoginResultAsync(LoginResult.AccountAlreadyConnected)).ConfigureAwait(false);
@@ -170,7 +177,7 @@ public class LoginAction
             // the account while the old session was still saving, and reserve it right after the old
             // session logged off: two diverging copies of the character, and the database ended up
             // with both of them - duplicated items, and items on top of each other.
-            var reserved = await gameServerContext.LoginServer.TryLoginAsync(username, gameServerContext.Id).ConfigureAwait(false);
+            var reserved = await TryRegisterAsync(player, gameServerContext, username).ConfigureAwait(false);
             if (reserved)
             {
                 // Remembered while the state change is in progress, which a disconnect waits for.
@@ -197,6 +204,14 @@ public class LoginAction
 
             if (loadedAccount.IsTemplate)
             {
+                if (IsAscensionStaging && player is IHasIpAddress)
+                {
+                    await ReleaseLoginServerRegistrationAsync(player).ConfigureAwait(false);
+                    context.Allowed = false;
+                    await player.InvokeViewPlugInAsync<IShowLoginResultPlugIn>(p => p.ShowLoginResultAsync(LoginResult.AccountBlocked)).ConfigureAwait(false);
+                    return (false, null);
+                }
+
                 // Template accounts may be logged in several times at once, so they never hold the reservation.
                 await ReleaseLoginServerRegistrationAsync(player).ConfigureAwait(false);
                 return (true, loadedAccount);
@@ -220,6 +235,11 @@ public class LoginAction
             return (false, null);
         }
     }
+
+    private static Task<bool> TryRegisterAsync(Player player, IGameServerContext context, string username)
+        => IsAscensionStaging && player is IHasIpAddress client
+            ? context.LoginServer.TryLoginFromAddressAsync(username, context.Id, client.IpAddress)
+            : context.LoginServer.TryLoginAsync(username, context.Id);
 
     /// <summary>
     /// Checks if the account fulfills the <see cref="IGameServerContext.JoinRequirements"/> of the game server,
@@ -299,6 +319,11 @@ public class LoginAction
     private async ValueTask FinishLoginAsync(Player player, string username, Account account)
     {
         await player.SetAccountAsync(account).ConfigureAwait(false);
+        if (IsAscensionStaging && player.GameContext is IGameServerContext server)
+        {
+            await server.EventPublisher.GameEventAsync(new AetherObservationEvent(server.Id, DateTime.UtcNow, "session", "login")).ConfigureAwait(false);
+        }
+
         player.Logger.LogDebug("Login successful, username: [{Username}].", username);
 
         if (player.IsTemplatePlayer)

@@ -34,7 +34,10 @@ public class ResetCharacterAction
     /// <summary>
     /// Reset specific character.
     /// </summary>
-    public async ValueTask ResetCharacterAsync()
+    public ValueTask ResetCharacterAsync()
+        => this._player.RunPersistenceExclusiveAsync(this.ResetExclusiveAsync);
+
+    private async ValueTask ResetExclusiveAsync()
     {
         var resetFeature = this._player.GameContext.FeaturePlugIns.GetPlugIn<ResetFeaturePlugIn>();
         if (resetFeature is null)
@@ -62,6 +65,13 @@ public class ResetCharacterAction
             return;
         }
 
+        if (this._player.Attributes[Stats.GrandResets] != 0)
+        {
+            // Do not remove or recreate historical stat bonuses as a side effect of a normal reset.
+            await this.ShowMessageAsync("PrestigeLegacyReviewRequired").ConfigureAwait(false);
+            return;
+        }
+
         var resetProgression = ResetProgressionCalculator.Calculate(this.GetResetCount(), (int)this._player.Attributes[Stats.PointsPerReset], configuration);
 
         if (this._player.Level < configuration.RequiredLevel)
@@ -85,6 +95,7 @@ public class ResetCharacterAction
         this._player.Attributes[Stats.Level] = configuration.LevelAfterReset;
         this._player.SelectedCharacter.Experience = 0;
         this.UpdateStats(configuration, resetProgression);
+        await this._player.ResetComboProgressAsync().ConfigureAwait(false);
         if (configuration.MoveHome)
         {
             await this.MoveHomeAsync().ConfigureAwait(false);
@@ -192,7 +203,7 @@ public class ResetCharacterAction
         }
         else
         {
-            this._player.SelectedCharacter!.LevelUpPoints += resetProgression.PointsForReset;
+            this._player.SelectedCharacter!.LevelUpPoints = checked(this._player.SelectedCharacter.LevelUpPoints + resetProgression.PointsForReset);
         }
     }
 
@@ -219,3 +230,4 @@ public class ResetCharacterAction
         await this._player.InvokeViewPlugInAsync<IUpdateLevelPlugIn>(p => p.UpdateLevelAsync()).ConfigureAwait(false);
     }
 }
+
