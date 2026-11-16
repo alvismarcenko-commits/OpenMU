@@ -9,6 +9,8 @@ using MUnique.OpenMU.DataModel.Configuration.Items;
 using MUnique.OpenMU.DataModel.Entities;
 using MUnique.OpenMU.GameLogic;
 using MUnique.OpenMU.GameLogic.Attributes;
+using MUnique.OpenMU.GameLogic.PlugIns.ChatCommands;
+using MUnique.OpenMU.GameLogic.Views.Character;
 using MUnique.OpenMU.GameLogic.Resets;
 using MUnique.OpenMU.GameLogic.Views;
 using MUnique.OpenMU.Interfaces;
@@ -367,6 +369,93 @@ public class GrandResetCharacterActionTest
         await action.GrandResetCharacterAsync().ConfigureAwait(false);
         Assert.That(((AtomicTestContext)player.PersistenceContext).Exchanges, Is.EqualTo(1));
         Assert.That(((AtomicTestContext)player.PersistenceContext).App, Is.EqualTo(new System.Numerics.BigInteger(100)));
+    }
+
+    /// <summary>
+    /// Publishes committed Origin values even when a client request has just consumed the throttle.
+    /// Repeated read-only refreshes and a repeated GR cannot issue a second reward.
+    /// </summary>
+    [Test]
+    [NonParallelizable]
+    public async Task OriginRefreshPublishesCommittedProgressWithoutRewardingAgainAsync()
+    {
+        var previousStaging = Environment.GetEnvironmentVariable("AETHER_LOCAL_STAGING");
+        Environment.SetEnvironmentVariable("AETHER_LOCAL_STAGING", "true");
+        try
+        {
+            using var player = await CreatePlayerAsync(true).ConfigureAwait(false);
+            player.GameContext.PlugInManager.RegisterPlugIn<IChatCommandPlugIn, ResetInfoChatCommandPlugIn>();
+            var configuration = player.GameContext.FeaturePlugIns.GetPlugIn<ResetFeaturePlugIn>()!.Configuration!;
+            configuration.PrestigeRealm = "origin";
+            configuration.PrestigeResetsRequired = 25;
+            player.Attributes![Stats.Resets] = 25;
+            player.Attributes[Stats.Level] = 400;
+            var character = player.SelectedCharacter!;
+            var inventory = character.Inventory;
+            var context = (AtomicTestContext)player.PersistenceContext;
+            var snapshots = new List<string>();
+            var view = Mock.Get(player.ViewPlugIns.GetPlugIn<IChatCommandListViewPlugIn>()!);
+            view.Setup(v => v.ShowChatCommandListAsync(It.IsAny<IReadOnlyCollection<ChatCommandInfo>>()))
+                .Callback<IReadOnlyCollection<ChatCommandInfo>>(commands =>
+                    snapshots.Add(commands.Single(c => c.Command == "/resetinfo app").Description))
+                .Returns(ValueTask.CompletedTask);
+            var stats = Mock.Get(player.ViewPlugIns.GetPlugIn<IUpdateCharacterBaseStatsPlugIn>()!);
+            stats.Setup(v => v.UpdateCharacterBaseStatsAsync()).Callback(() =>
+            {
+                Assert.That(context.Exchanges, Is.EqualTo(1), "Publish only after commit.");
+                Assert.That(player.Attributes[Stats.Resets], Is.Zero);
+            }).Returns(ValueTask.CompletedTask);
+
+            await AetherCommandCatalog.SendAsync(player).ConfigureAwait(false);
+            await new GrandResetCharacterAction(player).GrandResetCharacterAsync().ConfigureAwait(false);
+            Assert.That(snapshots, Has.Count.EqualTo(2), "The committed push bypasses the request throttle.");
+            Assert.That(snapshots.Last(), Is.EqualTo(player.GetLocalizedMessage(
+                "AetherUiPrestigeSnapshot", "origin", 1, 0, 25, "1", "100")));
+            for (var i = 0; i < 3; i++)
+            {
+                await AetherCommandCatalog.SendProgressUpdateAsync(player).ConfigureAwait(false);
+                await new ResetInfoChatCommandPlugIn().HandleCommandAsync(player, "/resetinfo app refresh").ConfigureAwait(false);
+            }
+
+            await new GrandResetCharacterAction(player).GrandResetCharacterAsync().ConfigureAwait(false);
+            Assert.Multiple(() =>
+            {
+                Assert.That(context.Exchanges, Is.EqualTo(1));
+                Assert.That(context.GrandResets.ToString(), Is.EqualTo("1"));
+                Assert.That(context.App.ToString(), Is.EqualTo("100"));
+                Assert.That(player.SelectedCharacter, Is.SameAs(character));
+                Assert.That(character.Inventory, Is.SameAs(inventory));
+                Assert.That(player.PlayerState.CurrentState, Is.EqualTo(PlayerState.EnteredWorld));
+            });
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("AETHER_LOCAL_STAGING", previousStaging);
+        }
+    }
+
+    /// <summary>
+    /// A failed post-commit UI send cannot roll back or replay the committed exchange.
+    /// </summary>
+    [Test]
+    public async Task FailedProgressNotificationDoesNotReplayExchangeAsync()
+    {
+        using var player = await CreatePlayerAsync(true).ConfigureAwait(false);
+        player.Attributes![Stats.Resets] = 100;
+        var context = (AtomicTestContext)player.PersistenceContext;
+        var view = Mock.Get(player.ViewPlugIns.GetPlugIn<IChatCommandListViewPlugIn>()!);
+        view.Setup(v => v.ShowChatCommandListAsync(It.IsAny<IReadOnlyCollection<ChatCommandInfo>>()))
+            .Throws(new InvalidOperationException("Simulated notification failure"));
+        await new GrandResetCharacterAction(player).GrandResetCharacterAsync().ConfigureAwait(false);
+        view.Verify(v => v.ShowChatCommandListAsync(It.IsAny<IReadOnlyCollection<ChatCommandInfo>>()), Times.Once);
+        await new GrandResetCharacterAction(player).GrandResetCharacterAsync().ConfigureAwait(false);
+        Assert.Multiple(() =>
+        {
+            Assert.That(context.Exchanges, Is.EqualTo(1));
+            Assert.That(context.GrandResets.ToString(), Is.EqualTo("1"));
+            Assert.That(context.App.ToString(), Is.EqualTo("100"));
+            Assert.That(player.Attributes[Stats.Resets], Is.Zero);
+        });
     }
 
     private sealed class AtomicTestContext : MUnique.OpenMU.Persistence.InMemory.PlayerInMemoryContext, MUnique.OpenMU.Persistence.IAtomicCharacterProgressContext, MUnique.OpenMU.Persistence.IPrestigeCharacterContext

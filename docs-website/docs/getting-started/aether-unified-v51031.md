@@ -76,3 +76,18 @@ scope and consumer configuration. Website native provisioning, VIP grants,
 premium access, Control Center administration, and native anti-cheat remain
 separate acceptance gates. No production deployment or main/master merge is
 part of this candidate.
+
+### Origin immediate progress refresh candidate
+
+The post-GR UI candidate sends the committed Reset count in the custom
+base-stat update and republishes the Prestige command-window snapshot after
+commit. Refresh publication cannot award APP or execute another GR. This
+requires a paired MuMain build that reads the optional reset-count suffix;
+the installed candidate Main.exe has no verified compatible build here. Unpatched
+clients remain dependent on character re-entry for their Reset display.
+
+This is **not yet a verified Windows gameplay fix**. Client build and live
+panel/database/inventory acceptance remain release gates. See
+`deploy/aethermu-europe/origin-progress-ui/README.md` for the paired source patch
+and the acceptance boundary. Do not replace the world-entry packet to force a
+refresh: its client handler reloads the world and clears equipment presentation.

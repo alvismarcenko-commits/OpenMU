@@ -26,6 +26,17 @@ public static class AetherCommandCatalog
             return;
         }
 
+        await SendCoreAsync(player, staging).ConfigureAwait(false);
+    }
+
+    /// <summary>Sends a committed progress snapshot without applying the client request throttle.</summary>
+    /// <param name="player">The current player.</param>
+    /// <returns>A task representing the catalogue delivery.</returns>
+    internal static ValueTask SendProgressUpdateAsync(Player player)
+        => SendCoreAsync(player, Environment.GetEnvironmentVariable("AETHER_LOCAL_STAGING") == "true");
+
+    private static async ValueTask SendCoreAsync(Player player, bool staging)
+    {
         var available = player.GetAvailableChatCommandInfos().ToList();
         if (staging)
         {

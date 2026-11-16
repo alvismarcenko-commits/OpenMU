@@ -1,0 +1,38 @@
+--- a/src/source/Network/Server/WSclient.cpp
++++ b/src/source/Network/Server/WSclient.cpp
+@@ -6917,9 +6917,23 @@
+     CharacterMachine->CalculateAll();
+ }
+ 
+-void ReceiveSetPointsExtended(const BYTE* ReceiveBuffer)
+-{
+-    auto Data = (LPPRECEIVE_SET_POINTS_EXTENDED)ReceiveBuffer;
++void ReceiveSetPointsExtended(std::span<const BYTE> ReceiveBuffer)
++{
++    auto Data = safe_cast<PRECEIVE_SET_POINTS_EXTENDED>(ReceiveBuffer, "PRECEIVE_SET_POINTS_EXTENDED");
++    if (Data == nullptr)
++    {
++        return;
++    }
++
++    // The original 24-byte form remains valid. Only the extended suffix updates resets;
++    // never reuse ReceiveJoinMapServer, which reloads the world and clears equipment.
++    constexpr std::size_t ResetCountOffset = sizeof(PRECEIVE_SET_POINTS_EXTENDED);
++    constexpr std::size_t ResetCountSize = sizeof(WORD);
++    if (ReceiveBuffer.size() >= ResetCountOffset + ResetCountSize)
++    {
++        CharacterAttribute->Resets = static_cast<WORD>(ReceiveBuffer[ResetCountOffset])
++            | (static_cast<WORD>(ReceiveBuffer[ResetCountOffset + 1]) << 8);
++    }
+     CharacterAttribute->Strength = Data->Strength;
+     CharacterAttribute->Dexterity = Data->Dexterity;
+     CharacterAttribute->Vitality = Data->Vitality;
+@@ -13517,7 +13531,7 @@
+             ReceiveOption(ReceiveBuffer);
+             break;
+         case 0x32:
+-            ReceiveSetPointsExtended(ReceiveBuffer);
++            ReceiveSetPointsExtended(received_span);
+             break;
+         case 0x40:
+             ReceiveServerCommand(ReceiveBuffer);

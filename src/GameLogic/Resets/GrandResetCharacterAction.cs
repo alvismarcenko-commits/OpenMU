@@ -6,6 +6,7 @@ namespace MUnique.OpenMU.GameLogic.Resets;
 
 using System.Text.Json;
 using MUnique.OpenMU.GameLogic.Attributes;
+using MUnique.OpenMU.GameLogic.PlugIns.ChatCommands;
 using MUnique.OpenMU.GameLogic.Views.Character;
 using MUnique.OpenMU.Persistence;
 
@@ -108,6 +109,9 @@ public class GrandResetCharacterAction
         var balance = result.RootElement.GetProperty("balance_app").GetString();
         await this._player.ShowLocalizedBlueMessageAsync("PrestigeGrandResetCompleted").ConfigureAwait(false);
         await this._player.ShowLocalizedBlueMessageAsync("PrestigeGrandResetBalance", balance).ConfigureAwait(false);
+
+        // Read-only UI publication after the transaction; never re-enter the exchange on a send failure.
+        await AetherCommandCatalog.SendProgressUpdateAsync(this._player).ConfigureAwait(false);
     }
 }
 

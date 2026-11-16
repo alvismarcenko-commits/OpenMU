@@ -3441,7 +3441,7 @@
       <Code>F3</Code>
       <SubCode>32</SubCode>
       <Name>BaseStatsExtended</Name>
-      <Length>24</Length>
+      <Length>26</Length>
       <Direction>ServerToClient</Direction>
       <SentWhen>Setting the base stats of a character, e.g. set stats command or after a reset.</SentWhen>
       <CausedReaction>The values are updated on the game client user interface.</CausedReaction>
@@ -3470,6 +3470,11 @@
           <Index>20</Index>
           <Type>IntegerLittleEndian</Type>
           <Name>Command</Name>
+        </Field>
+        <Field>
+          <Index>24</Index>
+          <Type>ShortLittleEndian</Type>
+          <Name>Resets</Name>
         </Field>
       </Fields>
     </Packet>

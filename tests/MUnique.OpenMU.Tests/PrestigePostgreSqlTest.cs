@@ -77,6 +77,53 @@ public partial class GrandResetPostgreSqlTest
         Assert.That(await this.PrestigeStateAsync(id, realm).ConfigureAwait(false), Is.EqualTo("1:" + award));
     }
 
+    /// <summary>
+    /// Repeated read-only UI refreshes observe the committed Origin exchange without changing its ledger or inventory.
+    /// </summary>
+    [Test]
+    public async Task OriginUiReadsCannotRepeatPrestigeCreditAsync()
+    {
+        var id = await this.SeedAsync(0).ConfigureAwait(false);
+        await this.PreparePrestigeAsync(id, "origin").ConfigureAwait(false);
+        string inventory;
+        await using (var context = this.CreateContext())
+        {
+            var character = await LoadAsync(context, id).ConfigureAwait(false);
+            character.RawAttributes.Single(a => a.DefinitionId == ResetId).Value = 25;
+            await context.SaveChangesAsync().ConfigureAwait(false);
+            inventory = DescribeInventory(character);
+            character.RawAttributes.Single(a => a.DefinitionId == ResetId).Value = 0;
+            character.RawAttributes.Single(a => a.DefinitionId == LevelId).Value = 1;
+            character.Experience = 0;
+            character.LevelUpPoints = 0;
+            using var persistence = CreatePersistence(context);
+            await ((IPrestigeCharacterContext)persistence).ExecutePrestigeExchangeAsync(
+                character, "origin", Guid.NewGuid().ToString(), 25).ConfigureAwait(false);
+            for (var refresh = 0; refresh < 16; refresh++)
+            {
+                Assert.That(await ((IPrestigeCharacterContext)persistence).ReadPrestigeAsync(character, "origin").ConfigureAwait(false),
+                    Is.EqualTo(("1", "100")));
+            }
+        }
+
+        await using var reopened = this.CreateContext();
+        var stored = await LoadAsync(reopened, id).ConfigureAwait(false);
+        Assert.Multiple(() =>
+        {
+            Assert.That(stored.RawAttributes.Single(a => a.DefinitionId == ResetId).Value, Is.Zero);
+            Assert.That(stored.RawAttributes.Single(a => a.DefinitionId == LevelId).Value, Is.EqualTo(1));
+            Assert.That(stored.LevelUpPoints, Is.Zero);
+            Assert.That(DescribeInventory(stored), Is.EqualTo(inventory));
+        });
+        await using var connection = new NpgsqlConnection(this._connectionString);
+        await connection.OpenAsync().ConfigureAwait(false);
+        await using var ledger = new NpgsqlCommand(
+            "SELECT count(*) FROM aether_prestige.ledger WHERE realm='origin' AND character_id=@id", connection);
+        ledger.Parameters.AddWithValue("id", id);
+        Assert.That(await ledger.ExecuteScalarAsync().ConfigureAwait(false), Is.EqualTo(1L));
+        Assert.That(await this.PrestigeStateAsync(id, "origin").ConfigureAwait(false), Is.EqualTo("1:100"));
+    }
+
     [Test]
     public async Task PrestigeFailedCreditRollsBackNativeAsync()
     {

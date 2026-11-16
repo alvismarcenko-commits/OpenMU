@@ -154,6 +154,35 @@ public class MapDiscriminatorRemoteViewTests
     }
 
     /// <summary>
+    /// Sends changed resets in the in-session base-stat packet without re-entering the world.
+    /// </summary>
+    [Test]
+    public async Task ProgressRefreshSendsResetsWithoutWorldEntryAsync()
+    {
+        var (player, output, _) = await CreatePlayerInWorldAsync(ExtendedClient, 0, enterOnStage: false).ConfigureAwait(false);
+        var character = player.SelectedCharacter;
+        var inventory = character!.Inventory;
+        output.SetLength(0);
+        foreach (var resets in new[] { 25, 0, 0 })
+        {
+            player.Attributes![Stats.Resets] = resets;
+            await new UpdateCharacterBaseStatsExtendedPlugIn(player).UpdateCharacterBaseStatsAsync().ConfigureAwait(false);
+        }
+
+        var packets = ReadPackets(output);
+        Assert.Multiple(() =>
+        {
+            Assert.That(packets, Has.Count.EqualTo(3));
+            Assert.That(packets.Select(p => p.Length), Is.All.EqualTo(26));
+            Assert.That(packets.Select(p => p[3]), Is.All.EqualTo(0x32));
+            Assert.That(packets.Select(p => ((BaseStatsExtended)p.AsMemory()).Resets), Is.EqualTo(new[] { 25, 0, 0 }));
+            Assert.That(player.SelectedCharacter, Is.SameAs(character));
+            Assert.That(character.Inventory, Is.SameAs(inventory));
+            Assert.That(player.PlayerState.CurrentState, Is.EqualTo(PlayerState.EnteredWorld));
+        });
+    }
+
+    /// <summary>
     /// Creates a remote player, which entered the world on map 0 or on a map with the number of Devil Square and
     /// the specified discriminator, with the plugins of the original and the extended client.
     /// </summary>

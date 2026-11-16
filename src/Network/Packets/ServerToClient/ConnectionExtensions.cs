@@ -1986,11 +1986,12 @@ public static class ConnectionExtensions
     /// <param name="vitality">The vitality.</param>
     /// <param name="energy">The energy.</param>
     /// <param name="command">The command.</param>
+    /// <param name="resets">The resets.</param>
     /// <remarks>
     /// Is sent by the server when: Setting the base stats of a character, e.g. set stats command or after a reset.
     /// Causes reaction on client side: The values are updated on the game client user interface.
     /// </remarks>
-    public static async ValueTask SendBaseStatsExtendedAsync(this IConnection? connection, uint @strength, uint @agility, uint @vitality, uint @energy, uint @command)
+    public static async ValueTask SendBaseStatsExtendedAsync(this IConnection? connection, uint @strength, uint @agility, uint @vitality, uint @energy, uint @command, ushort @resets)
     {
         if (connection is null)
         {
@@ -2006,6 +2007,7 @@ public static class ConnectionExtensions
             packet.Vitality = @vitality;
             packet.Energy = @energy;
             packet.Command = @command;
+            packet.Resets = @resets;
 
             return packet.Header.Length;
         }
