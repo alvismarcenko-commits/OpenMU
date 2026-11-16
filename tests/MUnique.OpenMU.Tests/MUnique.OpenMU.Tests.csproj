@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -57,4 +57,16 @@
     <ProjectReference Include="..\..\src\Persistence\InMemory\MUnique.OpenMU.Persistence.InMemory.csproj" />
     <ProjectReference Include="..\..\src\Persistence\MUnique.OpenMU.Persistence.csproj" />
   </ItemGroup>
+  <!-- Optional focused build for the disposable Grand Reset runner. Default builds are unchanged. -->
+  <PropertyGroup Condition="'$(GrandResetOnly)' == 'true'">
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(GrandResetOnly)' == 'true'">
+    <ProjectReference Remove="@(ProjectReference)" />
+    <ProjectReference Include="../../src/GameLogic/MUnique.OpenMU.GameLogic.csproj" />
+    <ProjectReference Include="../../src/Persistence/EntityFramework/MUnique.OpenMU.Persistence.EntityFramework.csproj" />
+    <ProjectReference Include="../../src/Persistence/InMemory/MUnique.OpenMU.Persistence.InMemory.csproj" />
+    <Compile Include="AetherAccountPostgreSqlTest.cs;PrestigePostgreSqlTest.cs;GrandResetCalculatorTest.cs;GrandResetCharacterActionTest.cs;GrandResetPostgreSqlSafetyTest.cs;GrandResetPostgreSqlTest.cs;PlayerTestHelper.cs;MockViewPlugInContainer.cs" />
+  </ItemGroup>
 </Project>
+

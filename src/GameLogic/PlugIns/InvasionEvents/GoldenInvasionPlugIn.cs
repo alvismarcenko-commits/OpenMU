@@ -13,7 +13,7 @@ using MUnique.OpenMU.PlugIns;
 [PlugIn]
 [Display(Name = nameof(PlugInResources.GoldenInvasionPlugIn_Name), Description = nameof(PlugInResources.GoldenInvasionPlugIn_Description), ResourceType = typeof(PlugInResources))]
 [Guid("06D18A9E-2919-4C17-9DBC-6E4F7756495C")]
-public sealed class GoldenInvasionPlugIn : SimpleInvasionPlugIn
+public sealed partial class GoldenInvasionPlugIn : SimpleInvasionPlugIn
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="GoldenInvasionPlugIn"/> class.

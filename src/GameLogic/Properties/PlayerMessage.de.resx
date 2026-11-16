@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -1015,4 +1015,16 @@ Inventarerweiterungen: {18}</value>
   <data name="MapIsNotActive" xml:space="preserve">
     <value>Diese Karte ist nicht verfügbar.</value>
   </data>
+  <data name="AetherUiPrestige" xml:space="preserve"><value>Aether Prestige</value></data>
+  <data name="AetherUiPrestigeSnapshot" xml:space="preserve"><value>{0} | Stufe {1}&#10;Reset {2}/{3} | GR {4}&#10;APP {5}&#10;Zum Aktualisieren refresh wählen.</value></data>
+  <data name="AetherUiPrestigeUnavailable" xml:space="preserve"><value>Prestige ist für diese Figur nicht verfügbar.</value></data>
+  <data name="AetherUiAction" xml:space="preserve"><value>Aktion</value></data>
+  <data name="AetherUiGrandReset" xml:space="preserve"><value>Grand Reset</value></data>
+  <data name="AetherUiGrandResetDetails" xml:space="preserve"><value>100 APP. Stufe 1, Reset 0. Gegenstände bleiben. Wähle confirm.</value></data>
+  <data name="AetherUiBuildSave" xml:space="preserve"><value>Build: speichern</value></data>
+  <data name="AetherUiBuildApply" xml:space="preserve"><value>Build: anwenden</value></data>
+  <data name="AetherUiBuildDetails" xml:space="preserve"><value>Wähle Platz 1–3 in der sicheren Zone. Es gelten reguläre Attributpunkte.</value></data>
+  <data name="AetherUiSlot" xml:space="preserve"><value>Platz</value></data>
+  <data name="AetherUiHunt" xml:space="preserve"><value>Schatzsuche</value></data>
+  <data name="AetherUiEvents" xml:space="preserve"><value>Veranstaltungsplan</value></data>
 </root>

@@ -1,4 +1,4 @@
-﻿// <copyright file="IncreaseStatsAction.cs" company="MUnique">
+// <copyright file="IncreaseStatsAction.cs" company="MUnique">
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.
 // </copyright>
 
@@ -20,7 +20,10 @@ public class IncreaseStatsAction
     /// <param name="player">The player.</param>
     /// <param name="targetAttribute">The stat attribute definition.</param>
     /// <param name="amount">The amount of points.</param>
-    public async ValueTask IncreaseStatsAsync(Player player, AttributeDefinition targetAttribute, ushort amount = 1)
+    public ValueTask IncreaseStatsAsync(Player player, AttributeDefinition targetAttribute, ushort amount = 1)
+        => player.RunPersistenceExclusiveAsync(() => IncreaseStatsExclusiveAsync(player, targetAttribute, amount));
+
+    private static async ValueTask IncreaseStatsExclusiveAsync(Player player, AttributeDefinition targetAttribute, ushort amount)
     {
         if (player.SelectedCharacter is not { } selectedCharacter)
         {
@@ -45,7 +48,7 @@ public class IncreaseStatsAction
                 && player.Attributes![attributeDef.Attribute] is { } current
                 && current + amount > maximumValue)
             {
-                amount = (ushort)(maximumValue - current);
+                amount = (ushort)Math.Max(0, maximumValue - current);
                 if (amount == 0)
                 {
                     await player.ShowLocalizedBlueMessageAsync(nameof(PlayerMessage.MaximumAttributeValueReachedFormat), attributeDef.Attribute?.MaximumValue, new LocalizedString(attributeDef.Attribute?.Designation).GetTranslation(player.Culture)).ConfigureAwait(false);

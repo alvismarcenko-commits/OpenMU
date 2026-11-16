@@ -153,7 +153,7 @@ internal sealed class Program : IDisposable
 
             if (_systemConfiguration?.ReadConsoleInput is true)
             {
-                await HandleConsoleInputAsync(exitCts, exitToken).ConfigureAwait(false);
+                await HandleConsoleInputAsync(exitCts, exitToken, program).ConfigureAwait(false);
             }
         }
     }
@@ -229,10 +229,16 @@ internal sealed class Program : IDisposable
         Console.WriteLine($"Commands available: {commandList}");
     }
 
-    private static async Task HandleConsoleInputAsync(CancellationTokenSource exitCts, CancellationToken exitToken)
+    private static async Task HandleConsoleInputAsync(CancellationTokenSource exitCts, CancellationToken exitToken, Program program)
     {
         Console.Write("> ");
         var input = (await Console.In.ReadLineAsync(exitToken).ConfigureAwait(false))?.ToLower();
+
+        if (input is not null && input.StartsWith("aether-", StringComparison.Ordinal))
+        {
+            await AetherInvasionCommand.RunAsync(input, program._gameServers, exitToken).ConfigureAwait(false);
+            return;
+        }
 
         switch (input)
         {
@@ -466,6 +472,7 @@ internal sealed class Program : IDisposable
             .AddControllers().AddApplicationPart(typeof(ServerController).Assembly);
 
         this.AddActorControlEndpoint(builder.Services);
+        AetherGuardianRegistration.Add(builder.Services);
 
         var host = builder.Build();
 

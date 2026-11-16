@@ -4,6 +4,8 @@
 
 namespace MUnique.OpenMU.Tests;
 
+using System.Threading.Tasks;
+
 /// <summary>
 /// Tests for the <see cref="LoginServer.LoginServer"/>.
 /// </summary>
@@ -54,6 +56,35 @@ public class LoginServerTest
         Assert.That(await server.TryLoginAsync("account", 1).ConfigureAwait(false), Is.True);
         clock.Now = clock.Now.AddMinutes(10);
         Assert.That(await server.TryLoginAsync("account", 2).ConfigureAwait(false), Is.False);
+    }
+
+    /// <summary>Parallel registrations share two slots, and the rightful logoff frees exactly one.</summary>
+    [Test]
+    [NonParallelizable]
+    public async Task AscensionAllowsTwoConcurrentAccountsPerAddressAsync()
+    {
+        const string variable = "AETHER_LOCAL_STAGING";
+        var previous = Environment.GetEnvironmentVariable(variable);
+        try
+        {
+            Environment.SetEnvironmentVariable(variable, "true");
+            var server = new LoginServer.LoginServer();
+            var results = await Task.WhenAll(Enumerable.Range(0, 10)
+                .Select(async i => (Account: $"account{i}", Accepted: await server.TryLoginFromAddressAsync($"account{i}", 1, "127.0.0.1").ConfigureAwait(false)))).ConfigureAwait(false);
+            Assert.That(results.Count(result => result.Accepted), Is.EqualTo(2));
+            Assert.That(server.ActiveAccountCount, Is.EqualTo(2));
+
+            var active = results.First(result => result.Accepted).Account;
+            await server.LogOffAsync(active, 2).ConfigureAwait(false);
+            Assert.That(await server.TryLoginFromAddressAsync("retry", 1, "127.0.0.1").ConfigureAwait(false), Is.False);
+            await server.LogOffAsync(active, 1).ConfigureAwait(false);
+            Assert.That(await server.TryLoginFromAddressAsync("retry", 1, "127.0.0.1").ConfigureAwait(false), Is.True);
+            Assert.That(await server.TryLoginFromAddressAsync("other", 1, "127.0.0.2").ConfigureAwait(false), Is.True);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(variable, previous);
+        }
     }
 
     private sealed class ReservationClock : TimeProvider

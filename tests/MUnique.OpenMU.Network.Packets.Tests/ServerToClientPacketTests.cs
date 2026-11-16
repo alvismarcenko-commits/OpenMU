@@ -1975,7 +1975,7 @@ public class PacketStructureTests
     public void BaseStatsExtended_PacketSizeValidation()
     {
         // Fixed-length packet validation
-        const int expectedLength = 24;
+        const int expectedLength = 26;
         var actualLength = BaseStatsExtendedRef.Length;
         
         Assert.That(actualLength, Is.EqualTo(expectedLength), 
@@ -2000,6 +2000,10 @@ public class PacketStructureTests
         // Validate field 'Command' boundary
         Assert.That(20 + 4, Is.LessThanOrEqualTo(expectedLength), 
             "Field 'Command' exceeds packet boundary");
+        
+        // Validate field 'Resets' boundary
+        Assert.That(24 + 2, Is.LessThanOrEqualTo(expectedLength), 
+            "Field 'Resets' exceeds packet boundary");
     }
 
     /// <summary>

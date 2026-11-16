@@ -1,0 +1,13 @@
+{
+  "GrandResetEnabled": false,
+  "RequiredLevel": 400,
+  "LevelAfterReset": 10,
+  "ResetStats": true,
+  "ReplacePointsPerReset": true,
+  "PointsPerReset": 500,
+  "MultiplyPointsByResetCount": true,
+  "RequiredMoney": 0,
+  "MultiplyRequiredMoneyByResetCount": false,
+  "LogOut": false,
+  "MoveHome": false
+}

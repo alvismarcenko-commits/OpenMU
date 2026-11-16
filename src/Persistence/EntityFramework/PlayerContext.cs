@@ -13,7 +13,7 @@ using MUnique.OpenMU.Persistence.EntityFramework.Model;
 /// <summary>
 /// Persistence context which is used by in-game players.
 /// </summary>
-internal class PlayerContext : CachingEntityFrameworkContext, IPlayerContext
+internal partial class PlayerContext : CachingEntityFrameworkContext, IPlayerContext, IAtomicCharacterProgressContext
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="PlayerContext" /> class.
@@ -733,3 +733,4 @@ internal class PlayerContext : CachingEntityFrameworkContext, IPlayerContext
             character.RawAttributes.Where(a => a.DefinitionId == resetsAttributeId).Select(a => a.Value).FirstOrDefault()));
     }
 }
+

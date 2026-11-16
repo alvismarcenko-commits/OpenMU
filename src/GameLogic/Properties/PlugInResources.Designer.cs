@@ -4818,5 +4818,30 @@ namespace MUnique.OpenMU.GameLogic.Properties {
                 return ResourceManager.GetString("DiscordIntegrationFeaturePlugIn_Description", resourceCulture);
             }
         }
+        /// <summary>
+        ///   Grand Reset command
+        /// </summary>
+        public static string GrandResetChatCommandPlugIn_Name {
+            get {
+                return ResourceManager.GetString("GrandResetChatCommandPlugIn_Name", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Exchanges 100 resets for one Grand Reset with permanent assignable points.
+        /// </summary>
+        public static string GrandResetChatCommandPlugIn_Description {
+            get {
+                return ResourceManager.GetString("GrandResetChatCommandPlugIn_Description", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Enable Grand Reset
+        /// </summary>
+        public static string ResetConfiguration_GrandResetEnabled_Name {
+            get {
+                return ResourceManager.GetString("ResetConfiguration_GrandResetEnabled_Name", resourceCulture);
+            }
+        }
     }
 }
+

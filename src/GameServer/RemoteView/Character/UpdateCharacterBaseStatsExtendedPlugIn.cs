@@ -43,7 +43,8 @@ public class UpdateCharacterBaseStatsExtendedPlugIn : IUpdateCharacterBaseStatsP
                 (uint)this._player.Attributes[Stats.BaseAgility],
                 (uint)this._player.Attributes[Stats.BaseVitality],
                 (uint)this._player.Attributes[Stats.BaseEnergy],
-                (uint)this._player.Attributes[Stats.BaseLeadership])
+                (uint)this._player.Attributes[Stats.BaseLeadership],
+                (ushort)this._player.Attributes[Stats.Resets])
             .ConfigureAwait(false);
     }
 }
